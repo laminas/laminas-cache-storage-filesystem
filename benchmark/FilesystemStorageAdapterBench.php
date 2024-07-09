@@ -6,16 +6,18 @@ namespace LaminasBench\Cache;
 
 use Laminas\Cache\Storage\Adapter\Benchmark\AbstractStorageAdapterBenchmark;
 use Laminas\Cache\Storage\Adapter\Filesystem;
-use PhpBench\Benchmark\Metadata\Annotations\Iterations;
-use PhpBench\Benchmark\Metadata\Annotations\Revs;
-use PhpBench\Benchmark\Metadata\Annotations\Warmup;
+use Laminas\Cache\Storage\Adapter\FilesystemOptions;
+use PhpBench\Attributes\Iterations;
+use PhpBench\Attributes\Revs;
+use PhpBench\Attributes\Warmup;
 
 /**
- * @Revs(100)
- * @Iterations(10)
- * @Warmup(1)
+ * @template-extends AbstractStorageAdapterBenchmark<FilesystemOptions>
  */
-class FilesystemStorageAdapterBench extends AbstractStorageAdapterBenchmark
+#[Revs(100)]
+#[Iterations(10)]
+#[Warmup(1)]
+final class FilesystemStorageAdapterBench extends AbstractStorageAdapterBenchmark
 {
     public function __construct()
     {

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Laminas\Cache\Storage\Adapter;
 
 use Laminas\Cache\Exception;
-use Traversable;
 
 use function assert;
 use function is_dir;
@@ -24,7 +23,7 @@ use const PHP_OS;
 
 final class FilesystemOptions extends AdapterOptions
 {
-    public const KEY_PATTERN = '/^[a-z0-9_\+\-]*$/Di';
+    public const KEY_PATTERN = '/^[a-z0-9_\+\-\.]*$/Di';
 
     /**
      * Directory to store cache files
@@ -45,10 +44,8 @@ final class FilesystemOptions extends AdapterOptions
 
     /**
      * Permission creating new directories
-     *
-     * @var false|int
      */
-    private $dirPermission = 0700;
+    private false|int $dirPermission = 0700;
 
     /**
      * Lock files on writing
@@ -57,17 +54,13 @@ final class FilesystemOptions extends AdapterOptions
 
     /**
      * Permission creating new files
-     *
-     * @var false|int
      */
-    private $filePermission = 0600;
+    private false|int $filePermission = 0600;
 
     /**
      * Overwrite default key pattern
-     *
-     * @var string
      */
-    protected $keyPattern = self::KEY_PATTERN;
+    protected string $keyPattern = self::KEY_PATTERN;
 
     /**
      * Namespace separator
@@ -86,10 +79,8 @@ final class FilesystemOptions extends AdapterOptions
 
     /**
      * Umask to create files and directories
-     *
-     * @var false|int
      */
-    private $umask = false;
+    private false|int $umask = false;
 
     /**
      * Suffix for cache files
@@ -102,9 +93,9 @@ final class FilesystemOptions extends AdapterOptions
     private string $tagSuffix = 'tag';
 
     /**
-     * @param  array|Traversable|null $options
+     * @param iterable<string,mixed>|null $options
      */
-    public function __construct($options = null)
+    public function __construct(iterable|null $options = null)
     {
         // disable file/directory permissions by default on windows systems
         if (stripos(PHP_OS, 'WIN') === 0) {
@@ -115,6 +106,19 @@ final class FilesystemOptions extends AdapterOptions
         $this->setCacheDir(null);
 
         parent::__construct($options);
+    }
+
+    public function setKeyPattern(string $keyPattern): self
+    {
+        if ($keyPattern !== self::KEY_PATTERN) {
+            throw new Exception\InvalidArgumentException(
+                'Filesystem adapter does not allow to reconfigure the key pattern as unix filesystem has'
+                . ' a concrete expectation on how files have to be named.'
+            );
+        }
+
+        parent::setKeyPattern($keyPattern);
+        return $this;
     }
 
     /**
@@ -191,13 +195,11 @@ final class FilesystemOptions extends AdapterOptions
      *
      * @param false|string|int $dirPermission FALSE to disable explicit permission or an octal number
      */
-    public function setDirPermission($dirPermission): self
+    public function setDirPermission(false|string|int $dirPermission): self
     {
         if ($dirPermission !== false) {
             if (is_string($dirPermission)) {
                 $dirPermission = octdec($dirPermission);
-            } else {
-                $dirPermission = (int) $dirPermission;
             }
 
             // validate
@@ -219,10 +221,8 @@ final class FilesystemOptions extends AdapterOptions
 
     /**
      * Get permission to create directories on unix systems
-     *
-     * @return false|int
      */
-    public function getDirPermission()
+    public function getDirPermission(): false|int
     {
         return $this->dirPermission;
     }
@@ -248,13 +248,11 @@ final class FilesystemOptions extends AdapterOptions
      *
      * @param false|string|int $filePermission FALSE to disable explicit permission or an octal number
      */
-    public function setFilePermission($filePermission): self
+    public function setFilePermission(false|string|int $filePermission): self
     {
         if ($filePermission !== false) {
             if (is_string($filePermission)) {
                 $filePermission = octdec($filePermission);
-            } else {
-                $filePermission = (int) $filePermission;
             }
 
             // validate
@@ -281,18 +279,13 @@ final class FilesystemOptions extends AdapterOptions
 
     /**
      * Get permission to create files on unix systems
-     *
-     * @return false|int
      */
-    public function getFilePermission()
+    public function getFilePermission(): false|int
     {
         return $this->filePermission;
     }
 
-    /**
-     * @param string $namespace
-     */
-    public function setNamespace($namespace): self
+    public function setNamespace(string $namespace): self
     {
         if (strlen($namespace) >= 250) {
             throw new Exception\InvalidArgumentException('Provided namespace is too long.');
@@ -358,13 +351,11 @@ final class FilesystemOptions extends AdapterOptions
      *
      * @param false|string|int $umask false to disable umask or an octal number
      */
-    public function setUmask($umask): self
+    public function setUmask(false|string|int $umask): self
     {
         if ($umask !== false) {
             if (is_string($umask)) {
                 $umask = octdec($umask);
-            } else {
-                $umask = (int) $umask;
             }
 
             // validate
@@ -389,10 +380,8 @@ final class FilesystemOptions extends AdapterOptions
 
     /**
      * Get the umask to create files and directories on unix systems
-     *
-     * @return false|int
      */
-    public function getUmask()
+    public function getUmask(): false|int
     {
         return $this->umask;
     }

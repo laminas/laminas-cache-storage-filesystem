@@ -8,26 +8,26 @@ use ArrayObject;
 use Exception as BaseException;
 use GlobIterator;
 use Laminas\Cache\Exception;
+use Laminas\Cache\Storage\AbstractMetadataCapableAdapter;
 use Laminas\Cache\Storage\Adapter\Filesystem\Exception\MetadataException;
 use Laminas\Cache\Storage\Adapter\Filesystem\Exception\UnlinkException;
 use Laminas\Cache\Storage\Adapter\Filesystem\FilesystemInteractionInterface;
 use Laminas\Cache\Storage\Adapter\Filesystem\LocalFilesystemInteraction;
+use Laminas\Cache\Storage\Adapter\Filesystem\Metadata;
 use Laminas\Cache\Storage\AvailableSpaceCapableInterface;
 use Laminas\Cache\Storage\Capabilities;
 use Laminas\Cache\Storage\ClearByNamespaceInterface;
 use Laminas\Cache\Storage\ClearByPrefixInterface;
 use Laminas\Cache\Storage\ClearExpiredInterface;
+use Laminas\Cache\Storage\Event;
 use Laminas\Cache\Storage\FlushableInterface;
 use Laminas\Cache\Storage\IterableInterface;
 use Laminas\Cache\Storage\OptimizableInterface;
 use Laminas\Cache\Storage\TaggableInterface;
 use Laminas\Cache\Storage\TotalSpaceCapableInterface;
 use Laminas\Stdlib\ErrorHandler;
-use stdClass;
-use Traversable;
 
 use function array_diff;
-use function array_search;
 use function array_unshift;
 use function assert;
 use function basename;
@@ -37,6 +37,7 @@ use function explode;
 use function func_num_args;
 use function glob;
 use function implode;
+use function is_bool;
 use function is_string;
 use function max;
 use function md5;
@@ -55,8 +56,9 @@ use const GLOB_ONLYDIR;
 
 /**
  * @implements IterableInterface<string, mixed>
+ * @template-extends AbstractMetadataCapableAdapter<FilesystemOptions,Metadata>
  */
-final class Filesystem extends AbstractAdapter implements
+final class Filesystem extends AbstractMetadataCapableAdapter implements
     AvailableSpaceCapableInterface,
     ClearByNamespaceInterface,
     ClearByPrefixInterface,
@@ -67,18 +69,10 @@ final class Filesystem extends AbstractAdapter implements
     TaggableInterface,
     TotalSpaceCapableInterface
 {
-    public const METADATA_ATIME    = 'atime';
-    public const METADATA_CTIME    = 'ctime';
-    public const METADATA_MTIME    = 'mtime';
-    public const METADATA_FILESIZE = 'filesize';
-    public const METADATA_FILESPEC = 'filespec';
-
     /**
      * Buffered total space in bytes
-     *
-     * @var null|int|float
      */
-    private $totalSpace;
+    private ?int $totalSpace = null;
 
     /**
      * An identity for the last filespec
@@ -94,24 +88,22 @@ final class Filesystem extends AbstractAdapter implements
     private FilesystemInteractionInterface $filesystem;
 
     /**
-     * @param  null|array|Traversable|AdapterOptions $options
-     * @throws Exception\ExceptionInterface
+     * @param  null|iterable<string,mixed>|FilesystemOptions $options
      */
-    public function __construct($options = null, ?FilesystemInteractionInterface $filesystem = null)
-    {
+    public function __construct(
+        null|iterable|FilesystemOptions $options = null,
+        FilesystemInteractionInterface|null $filesystem = null,
+    ) {
         parent::__construct($options);
         $this->filesystem = $filesystem ?? new LocalFilesystemInteraction();
 
         // clean total space buffer on change cache_dir
-        $events     = $this->getEventManager();
-        $handle     = static function (): void {
-        };
-        $totalSpace = &$this->totalSpace;
-        $callback   = static function ($event) use (&$events, &$handle, &$totalSpace): void {
+        $events   = $this->getEventManager();
+        $callback = function (Event $event) use ($events): void {
             $params = $event->getParams();
             if (isset($params['cache_dir'])) {
-                $totalSpace = null;
-                $events->detach($handle);
+                $this->totalSpace = null;
+                $events->detach(static fn () => null);
             }
         };
 
@@ -119,14 +111,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Set options.
-     *
-     * @see    Filesystem::getOptions()
-     *
-     * @param array<string, mixed>|Traversable<string, mixed>|FilesystemOptions $options
-     * @return Filesystem
+     * {@inheritDoc}
      */
-    public function setOptions($options)
+    public function setOptions(iterable|AdapterOptions $options): self
     {
         if (! $options instanceof FilesystemOptions) {
             $options = new FilesystemOptions($options);
@@ -137,29 +124,23 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Get options.
-     *
-     * @see Filesystem::setOptions()
-     *
-     * @return FilesystemOptions
+     * {@inheritDoc}
      */
-    public function getOptions()
+    public function getOptions(): FilesystemOptions
     {
-        if (! $this->options) {
-            $this->setOptions(new FilesystemOptions());
+        $options = $this->options;
+        if ($options === null) {
+            $options = new FilesystemOptions();
+            $this->setOptions($options);
         }
-        return $this->options;
+
+        return $options;
     }
 
-    /* FlushableInterface */
-
     /**
-     * Flush the whole storage
-     *
-     * @throws Exception\RuntimeException
-     * @return bool
+     * {@inheritDoc}
      */
-    public function flush()
+    public function flush(): bool
     {
         $flags       = GlobIterator::SKIP_DOTS | GlobIterator::CURRENT_AS_PATHNAME;
         $dir         = $this->getOptions()->getCacheDir();
@@ -199,15 +180,10 @@ final class Filesystem extends AbstractAdapter implements
         return true;
     }
 
-    /* ClearExpiredInterface */
-
     /**
-     * Remove expired items
-     *
-     * @return bool
-     * @triggers clearExpired.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function clearExpired()
+    public function clearExpired(): bool
     {
         $options   = $this->getOptions();
         $namespace = $options->getNamespace();
@@ -272,30 +248,29 @@ final class Filesystem extends AbstractAdapter implements
         }
         $error = ErrorHandler::stop();
         if ($error) {
-            $result = false;
-            return $this->triggerException(
+            $result = $this->triggerThrowable(
                 __FUNCTION__,
                 new ArrayObject(),
-                $result,
+                false,
                 new Exception\RuntimeException('Failed to clear expired items', 0, $error)
             );
+
+            if (! is_bool($result)) {
+                throw new Exception\RuntimeException("Failed to remove files of '{$path}'", 0, $error);
+            }
+
+            return $result;
         }
 
         return true;
     }
 
-    /* ClearByNamespaceInterface */
-
     /**
-     * Remove items by given namespace
-     *
-     * @param string $namespace
-     * @throws Exception\RuntimeException
-     * @return bool
+     * {@inheritDoc}
      */
-    public function clearByNamespace($namespace)
+    public function clearByNamespace(string $namespace): bool
     {
-        $namespace = (string) $namespace;
+        /** @psalm-suppress TypeDoesNotContainType To prevent deleting unexpected files, we should double validate */
         if ($namespace === '') {
             throw new Exception\InvalidArgumentException('No namespace given');
         }
@@ -329,30 +304,29 @@ final class Filesystem extends AbstractAdapter implements
 
         $err = ErrorHandler::stop();
         if ($err) {
-            $result = false;
-            return $this->triggerException(
+            $result = $this->triggerThrowable(
                 __FUNCTION__,
                 new ArrayObject(),
-                $result,
+                false,
                 new Exception\RuntimeException("Failed to clear items of namespace '{$namespace}'", 0, $err)
             );
+
+            if (! is_bool($result)) {
+                throw new Exception\RuntimeException("Failed to remove files of '{$path}'", 0, $err);
+            }
+
+            return $result;
         }
 
         return true;
     }
 
-    /* ClearByPrefixInterface */
-
     /**
-     * Remove items matching given prefix
-     *
-     * @param string $prefix
-     * @throws Exception\RuntimeException
-     * @return bool
+     * {@inheritDoc}
      */
-    public function clearByPrefix($prefix)
+    public function clearByPrefix(string $prefix): bool
     {
-        $prefix = (string) $prefix;
+        /** @psalm-suppress TypeDoesNotContainType To prevent deleting unexpected files, we should double validate */
         if ($prefix === '') {
             throw new Exception\InvalidArgumentException('No prefix given');
         }
@@ -387,31 +361,30 @@ final class Filesystem extends AbstractAdapter implements
         }
         $err = ErrorHandler::stop();
         if ($err) {
-            $result = false;
-            return $this->triggerException(
+            $result    = false;
+            $throwable = new Exception\RuntimeException("Failed to remove files of '{$path}'", 0, $err);
+            $result    = $this->triggerThrowable(
                 __FUNCTION__,
                 new ArrayObject(),
                 $result,
-                new Exception\RuntimeException("Failed to remove files of '{$path}'", 0, $err)
+                $throwable,
             );
+
+            if (! is_bool($result)) {
+                throw new Exception\RuntimeException("Failed to remove files of '{$path}'", 0, $err);
+            }
+
+            return $result;
         }
 
         return true;
     }
 
-    /* TaggableInterface  */
-
     /**
-     * Set tags to an item by given key.
-     * An empty array will remove all tags.
-     *
-     * @param string   $key
-     * @param string[] $tags
-     * @return bool
+     * {@inheritDoc}
      */
-    public function setTags($key, array $tags)
+    public function setTags(string $key, array $tags): bool
     {
-        $this->normalizeKey($key);
         if (! $this->internalHasItem($key)) {
             return false;
         }
@@ -431,14 +404,10 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Get tags of an item by given key
-     *
-     * @param string $key
-     * @return string[]|FALSE
+     * {@inheritDoc}
      */
-    public function getTags($key)
+    public function getTags(string $key): array|false
     {
-        $this->normalizeKey($key);
         if (! $this->internalHasItem($key)) {
             return false;
         }
@@ -453,16 +422,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Remove items matching given tags.
-     *
-     * If $disjunction only one of the given tags must match
-     * else all given tags must match.
-     *
-     * @param string[] $tags
-     * @param  bool  $disjunction
-     * @return bool
+     * {@inheritDoc}
      */
-    public function clearByTags(array $tags, $disjunction = false)
+    public function clearByTags(array $tags, bool $disjunction = false): bool
     {
         if (! $tags) {
             return true;
@@ -513,14 +475,10 @@ final class Filesystem extends AbstractAdapter implements
         return true;
     }
 
-    /* IterableInterface */
-
     /**
-     * Get the storage iterator
-     *
-     * @return FilesystemIterator
+     * {@inheritDoc}
      */
-    public function getIterator(): Traversable
+    public function getIterator(): FilesystemIterator
     {
         $options   = $this->getOptions();
         $namespace = $options->getNamespace();
@@ -532,15 +490,10 @@ final class Filesystem extends AbstractAdapter implements
         return new FilesystemIterator($this, $path, $prefix);
     }
 
-    /* OptimizableInterface */
-
     /**
-     * Optimize the storage
-     *
-     * @return bool
-     * @throws Exception\RuntimeException
+     * {@inheritDoc}
      */
-    public function optimize()
+    public function optimize(): bool
     {
         $options = $this->getOptions();
         if ($options->getDirLevel()) {
@@ -553,55 +506,34 @@ final class Filesystem extends AbstractAdapter implements
         return true;
     }
 
-    /* TotalSpaceCapableInterface */
-
     /**
-     * Get total space in bytes
-     *
-     * @throws Exception\RuntimeException
-     * @return int|float
+     * {@inheritDoc}
      */
-    public function getTotalSpace()
+    public function getTotalSpace(): int
     {
         if ($this->totalSpace === null) {
             $path = $this->getOptions()->getCacheDir();
 
-            $this->totalSpace = (float) $this->filesystem->totalBytes($path);
+            $this->totalSpace = $this->filesystem->totalBytes($path);
         }
 
         return $this->totalSpace;
     }
 
-    /* AvailableSpaceCapableInterface */
-
     /**
-     * Get available space in bytes
-     *
-     * @throws Exception\RuntimeException
-     * @return float
+     * {@inheritDoc}
      */
-    public function getAvailableSpace()
+    public function getAvailableSpace(): int
     {
         $path = $this->getOptions()->getCacheDir();
 
-        return (float) $this->filesystem->availableBytes($path);
+        return $this->filesystem->availableBytes($path);
     }
 
-    /* reading */
-
     /**
-     * Get an item.
-     *
-     * @param  string  $key
-     * @param  bool $success
-     * @param  mixed   $casToken
-     * @return mixed Data on success, null on failure
-     * @throws Exception\ExceptionInterface
-     * @triggers getItem.pre(PreEvent)
-     * @triggers getItem.post(PostEvent)
-     * @triggers getItem.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function getItem($key, &$success = null, &$casToken = null)
+    public function getItem(string $key, ?bool &$success = null, mixed &$casToken = null): mixed
     {
         $options = $this->getOptions();
         if ($options->getReadable() && $options->getClearStatCache()) {
@@ -619,16 +551,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Get multiple items.
-     *
-     * @param  array $keys
-     * @return array Associative array of keys and values
-     * @throws Exception\ExceptionInterface
-     * @triggers getItems.pre(PreEvent)
-     * @triggers getItems.post(PostEvent)
-     * @triggers getItems.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function getItems(array $keys)
+    public function getItems(array $keys): array
     {
         $options = $this->getOptions();
         if ($options->getReadable() && $options->getClearStatCache()) {
@@ -639,20 +564,13 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Internal method to get an item.
-     *
-     * @param  string  $normalizedKey
-     * @param  bool $success
-     * @param  mixed   $casToken
-     * @return null|mixed Data on success, null on failure
-     * @throws Exception\ExceptionInterface
-     * @throws BaseException
+     * {@inheritDoc}
      */
-    protected function internalGetItem(&$normalizedKey, &$success = null, &$casToken = null)
+    protected function internalGetItem(string $normalizedKey, ?bool &$success = null, mixed &$casToken = null): mixed
     {
         if (! $this->internalHasItem($normalizedKey)) {
             $success = false;
-            return;
+            return null;
         }
 
         try {
@@ -676,13 +594,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Internal method to get multiple items.
-     *
-     * @param  array $normalizedKeys
-     * @return array Associative array of keys and values
-     * @throws Exception\ExceptionInterface
+     * {@inheritDoc}
      */
-    protected function internalGetItems(array &$normalizedKeys)
+    protected function internalGetItems(array $normalizedKeys): array
     {
         $keys   = $normalizedKeys; // Don't change argument passed by reference
         $result = [];
@@ -693,12 +607,12 @@ final class Filesystem extends AbstractAdapter implements
 
             // read items
             foreach ($keys as $i => $key) {
-                if (! $this->internalHasItem($key)) {
+                if (! $this->internalHasItem((string) $key)) {
                     unset($keys[$i]);
                     continue;
                 }
 
-                $filespec = $this->formatFilename($this->getFileSpec($key));
+                $filespec = $this->formatFilename($this->getFileSpec((string) $key));
                 $data     = $this->getFileContent($filespec, $nonBlocking, $wouldblock);
                 if ($nonBlocking && $wouldblock) {
                     continue;
@@ -717,16 +631,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Test if an item exists.
-     *
-     * @param  string $key
-     * @return bool
-     * @throws Exception\ExceptionInterface
-     * @triggers hasItem.pre(PreEvent)
-     * @triggers hasItem.post(PostEvent)
-     * @triggers hasItem.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function hasItem($key)
+    public function hasItem(string $key): bool
     {
         $options = $this->getOptions();
         if ($options->getReadable() && $options->getClearStatCache()) {
@@ -737,16 +644,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Test multiple items.
-     *
-     * @param  array $keys
-     * @return array Array of found keys
-     * @throws Exception\ExceptionInterface
-     * @triggers hasItems.pre(PreEvent)
-     * @triggers hasItems.post(PostEvent)
-     * @triggers hasItems.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function hasItems(array $keys)
+    public function hasItems(array $keys): array
     {
         $options = $this->getOptions();
         if ($options->getReadable() && $options->getClearStatCache()) {
@@ -757,13 +657,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Internal method to test if an item exists.
-     *
-     * @param  string $normalizedKey
-     * @return bool
-     * @throws Exception\ExceptionInterface
+     * {@inheritDoc}
      */
-    protected function internalHasItem(&$normalizedKey)
+    protected function internalHasItem(string $normalizedKey): bool
     {
         $file = $this->formatFilename($this->getFileSpec($normalizedKey));
         if (! $this->filesystem->exists($file)) {
@@ -783,12 +679,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Get metadata
-     *
-     * @param string $key
-     * @return array|bool Metadata on success, false on failure
+     * {@inheritDoc}
      */
-    public function getMetadata($key)
+    public function getMetadata(string $key): Metadata|null
     {
         $options = $this->getOptions();
         if ($options->getReadable() && $options->getClearStatCache()) {
@@ -799,13 +692,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Get metadatas
-     *
-     * @param array $keys
-     * @param array $options
-     * @return array Associative array of keys and metadata
+     * {@inheritDoc}
      */
-    public function getMetadatas(array $keys, array $options = [])
+    public function getMetadatas(array $keys, array $options = []): array
     {
         $options = $this->getOptions();
         if ($options->getReadable() && $options->getClearStatCache()) {
@@ -816,67 +705,53 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Get info by key
-     *
-     * @param string $normalizedKey
-     * @return array|bool Metadata on success, false on failure
+     * {@inheritDoc}
      */
-    protected function internalGetMetadata(&$normalizedKey)
+    protected function internalGetMetadata(string $normalizedKey): Metadata|null
     {
         if (! $this->internalHasItem($normalizedKey)) {
-            return false;
+            return null;
         }
 
         $options  = $this->getOptions();
         $filespec = $this->getFileSpec($normalizedKey);
         $file     = $this->formatFilename($filespec);
 
+        $mtime = null;
         try {
             $mtime = $this->filesystem->lastModifiedTime($file);
         } catch (Exception\RuntimeException $exception) {
-            $mtime = false;
         }
 
-        $metadata = [
-            self::METADATA_FILESPEC => $filespec,
-            self::METADATA_MTIME    => $mtime,
-        ];
-
+        $ctime = null;
         if (! $options->getNoCtime()) {
             try {
                 $ctime = $this->filesystem->createdTime($file);
-            } catch (Exception\RuntimeException $exception) {
-                $ctime = false;
+            } catch (Exception\RuntimeException) {
             }
-            $metadata[self::METADATA_CTIME] = $ctime;
         }
 
+        $atime = null;
         if (! $options->getNoAtime()) {
             try {
                 $atime = $this->filesystem->lastAccessedTime($file);
-            } catch (Exception\RuntimeException $exception) {
-                $atime = false;
+            } catch (Exception\RuntimeException) {
             }
-            $metadata[self::METADATA_ATIME] = $atime;
         }
 
-        return $metadata;
+        $filesize = null;
+        try {
+            $filesize = $this->filesystem->filesize($file);
+        } catch (Exception\RuntimeException) {
+        }
+
+        return new Metadata($atime, $ctime, $mtime, $filesize, $filespec);
     }
 
-    /* writing */
-
     /**
-     * Store an item.
-     *
-     * @param  string $key
-     * @param  mixed  $value
-     * @return bool
-     * @throws Exception\ExceptionInterface
-     * @triggers setItem.pre(PreEvent)
-     * @triggers setItem.post(PostEvent)
-     * @triggers setItem.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function setItem($key, $value)
+    public function setItem(string $key, mixed $value): bool
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -886,16 +761,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Store multiple items.
-     *
-     * @param  array $keyValuePairs
-     * @return array Array of not stored keys
-     * @throws Exception\ExceptionInterface
-     * @triggers setItems.pre(PreEvent)
-     * @triggers setItems.post(PostEvent)
-     * @triggers setItems.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function setItems(array $keyValuePairs)
+    public function setItems(array $keyValuePairs): array
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -906,17 +774,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Add an item.
-     *
-     * @param  string $key
-     * @param  mixed  $value
-     * @return bool
-     * @throws Exception\ExceptionInterface
-     * @triggers addItem.pre(PreEvent)
-     * @triggers addItem.post(PostEvent)
-     * @triggers addItem.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function addItem($key, $value)
+    public function addItem(string $key, mixed $value): bool
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -927,16 +787,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Add multiple items.
-     *
-     * @param  array $keyValuePairs
-     * @return array Array of not stored keys
-     * @throws Exception\ExceptionInterface
-     * @triggers addItems.pre(PreEvent)
-     * @triggers addItems.post(PostEvent)
-     * @triggers addItems.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function addItems(array $keyValuePairs)
+    public function addItems(array $keyValuePairs): array
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -947,17 +800,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Replace an existing item.
-     *
-     * @param  string $key
-     * @param  mixed  $value
-     * @return bool
-     * @throws Exception\ExceptionInterface
-     * @triggers replaceItem.pre(PreEvent)
-     * @triggers replaceItem.post(PostEvent)
-     * @triggers replaceItem.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function replaceItem($key, $value)
+    public function replaceItem(string $key, mixed $value): bool
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -968,16 +813,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Replace multiple existing items.
-     *
-     * @param  array $keyValuePairs
-     * @return array Array of not stored keys
-     * @throws Exception\ExceptionInterface
-     * @triggers replaceItems.pre(PreEvent)
-     * @triggers replaceItems.post(PostEvent)
-     * @triggers replaceItems.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function replaceItems(array $keyValuePairs)
+    public function replaceItems(array $keyValuePairs): array
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -988,13 +826,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Internal method to store an item.
-     *
-     * @param  string $normalizedKey
-     * @return bool
-     * @throws Exception\ExceptionInterface
+     * {@inheritDoc}
      */
-    protected function internalSetItem(&$normalizedKey, mixed &$value)
+    protected function internalSetItem(string $normalizedKey, mixed $value): bool
     {
         $filespec = $this->getFileSpec($normalizedKey);
         $file     = $this->formatFilename($filespec);
@@ -1015,13 +849,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Internal method to store multiple items.
-     *
-     * @param  array $normalizedKeyValuePairs
-     * @return array Array of not stored keys
-     * @throws Exception\ExceptionInterface
+     * {@inheritDoc}
      */
-    protected function internalSetItems(array &$normalizedKeyValuePairs)
+    protected function internalSetItems(array $normalizedKeyValuePairs): array
     {
         // create an associated array of files and contents to write
         $contents = [];
@@ -1037,7 +867,7 @@ final class Filesystem extends AbstractAdapter implements
         }
 
         // write to disk
-        while ($contents) {
+        do {
             $nonBlocking = count($contents) > 1;
 
             foreach ($contents as $file => &$content) {
@@ -1047,28 +877,16 @@ final class Filesystem extends AbstractAdapter implements
                     unset($contents[$file]);
                 }
             }
-        }
+        } while ($contents !== []);
 
         // return OK
         return [];
     }
 
     /**
-     * Set an item only if token matches
-     *
-     * It uses the token received from getItem() to check if the item has
-     * changed before overwriting it.
-     *
-     * @see    Filesystem::getItem()
-     * @see    Filesystem::setItem()
-     *
-     * @param  mixed  $token
-     * @param  string $key
-     * @param  mixed  $value
-     * @return bool
-     * @throws Exception\ExceptionInterface
+     * {@inheritDoc}
      */
-    public function checkAndSetItem($token, $key, $value)
+    public function checkAndSetItem(mixed $token, string $key, mixed $value): bool
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -1079,17 +897,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Internal method to set an item only if token matches
-     *
-     * @see    Filesystem::getItem()
-     * @see    Filesystem::setItem()
-     *
-     * @param  mixed  $token
-     * @param  string $normalizedKey
-     * @return bool
-     * @throws Exception\ExceptionInterface
+     * {@inheritDoc}
      */
-    protected function internalCheckAndSetItem(&$token, &$normalizedKey, mixed &$value)
+    protected function internalCheckAndSetItem(mixed $token, string $normalizedKey, mixed $value): bool
     {
         if (! $this->internalHasItem($normalizedKey)) {
             return false;
@@ -1111,16 +921,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Reset lifetime of an item
-     *
-     * @param  string $key
-     * @return bool
-     * @throws Exception\ExceptionInterface
-     * @triggers touchItem.pre(PreEvent)
-     * @triggers touchItem.post(PostEvent)
-     * @triggers touchItem.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function touchItem($key)
+    public function touchItem(string $key): bool
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -1131,16 +934,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Reset lifetime of multiple items.
-     *
-     * @param  array $keys
-     * @return array Array of not updated keys
-     * @throws Exception\ExceptionInterface
-     * @triggers touchItems.pre(PreEvent)
-     * @triggers touchItems.post(PostEvent)
-     * @triggers touchItems.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function touchItems(array $keys)
+    public function touchItems(array $keys): array
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -1151,13 +947,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Internal method to reset lifetime of an item
-     *
-     * @param  string $normalizedKey
-     * @return bool
-     * @throws Exception\ExceptionInterface
+     * {@inheritDoc}
      */
-    protected function internalTouchItem(&$normalizedKey)
+    protected function internalTouchItem(string $normalizedKey): bool
     {
         if (! $this->internalHasItem($normalizedKey)) {
             return false;
@@ -1170,16 +962,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Remove an item.
-     *
-     * @param  string $key
-     * @return bool
-     * @throws Exception\ExceptionInterface
-     * @triggers removeItem.pre(PreEvent)
-     * @triggers removeItem.post(PostEvent)
-     * @triggers removeItem.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function removeItem($key)
+    public function removeItem(string $key): bool
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -1190,16 +975,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Remove multiple items.
-     *
-     * @param  array $keys
-     * @return array Array of not removed keys
-     * @throws Exception\ExceptionInterface
-     * @triggers removeItems.pre(PreEvent)
-     * @triggers removeItems.post(PostEvent)
-     * @triggers removeItems.exception(ExceptionEvent)
+     * {@inheritDoc}
      */
-    public function removeItems(array $keys)
+    public function removeItems(array $keys): array
     {
         $options = $this->getOptions();
         if ($options->getWritable() && $options->getClearStatCache()) {
@@ -1210,13 +988,9 @@ final class Filesystem extends AbstractAdapter implements
     }
 
     /**
-     * Internal method to remove an item.
-     *
-     * @param  string $normalizedKey
-     * @return bool
-     * @throws Exception\ExceptionInterface
+     * {@inheritDoc}
      */
-    protected function internalRemoveItem(&$normalizedKey)
+    protected function internalRemoveItem(string $normalizedKey): bool
     {
         $filespec = $this->getFileSpec($normalizedKey);
         $file     = $this->formatFilename($filespec);
@@ -1229,27 +1003,13 @@ final class Filesystem extends AbstractAdapter implements
         return true;
     }
 
-    /* status */
-
     /**
-     * Internal method to get capabilities of this adapter
-     *
-     * @return Capabilities
+     * {@inheritDoc}
      */
-    protected function internalGetCapabilities()
+    protected function internalGetCapabilities(): Capabilities
     {
         if ($this->capabilities === null) {
-            $marker  = new stdClass();
             $options = $this->getOptions();
-
-            // detect metadata
-            $metadata = [self::METADATA_MTIME, self::METADATA_FILESPEC];
-            if (! $options->getNoAtime()) {
-                $metadata[] = self::METADATA_ATIME;
-            }
-            if (! $options->getNoCtime()) {
-                $metadata[] = self::METADATA_CTIME;
-            }
 
             // Calculate max key length: 255 - strlen(.) - strlen(dat | tag)
             $maxKeyLength = 255 - 1 - max([
@@ -1269,72 +1029,30 @@ final class Filesystem extends AbstractAdapter implements
                 );
             }
 
-            $capabilities = new Capabilities(
-                $this,
-                $marker,
+            $this->capabilities = new Capabilities(
+                $maxKeyLength,
+                true,
+                true,
                 [
-                    'supportedDatatypes' => [
-                        'NULL'     => 'string',
-                        'boolean'  => 'string',
-                        'integer'  => 'string',
-                        'double'   => 'string',
-                        'string'   => true,
-                        'array'    => false,
-                        'object'   => false,
-                        'resource' => false,
-                    ],
-                    'supportedMetadata'  => $metadata,
-                    'minTtl'             => 1,
-                    'maxTtl'             => 0,
-                    'staticTtl'          => false,
-                    'ttlPrecision'       => 1,
-                    'maxKeyLength'       => $maxKeyLength,
-                    'namespaceIsPrefix'  => true,
-                    'namespaceSeparator' => $options->getNamespaceSeparator(),
-                ]
+                    'NULL'     => 'string',
+                    'boolean'  => 'string',
+                    'integer'  => 'string',
+                    'double'   => 'string',
+                    'string'   => true,
+                    'array'    => false,
+                    'object'   => false,
+                    'resource' => false,
+                ],
+                1,
+                false,
             );
 
             // update capabilities on change options
-            $this->getEventManager()->attach('option', static function ($event) use ($capabilities, $marker): void {
-                $params = $event->getParams();
-
-                if (isset($params['namespace_separator'])) {
-                    $capabilities->setNamespaceSeparator($marker, $params['namespace_separator']);
-                }
-
-                if (isset($params['no_atime']) || isset($params['no_ctime'])) {
-                    $metadata = $capabilities->getSupportedMetadata();
-
-                    if (isset($params['no_atime']) && ! $params['no_atime']) {
-                        $metadata[] = self::METADATA_ATIME;
-                    } elseif (
-                        isset($params['no_atime'])
-                        && ($index = array_search(self::METADATA_ATIME, $metadata)) !== false
-                    ) {
-                        unset($metadata[$index]);
-                    }
-
-                    if (isset($params['no_ctime']) && ! $params['no_ctime']) {
-                        $metadata[] = self::METADATA_CTIME;
-                    } elseif (
-                        isset($params['no_ctime'])
-                        && ($index = array_search(self::METADATA_CTIME, $metadata)) !== false
-                    ) {
-                        unset($metadata[$index]);
-                    }
-
-                    $capabilities->setSupportedMetadata($marker, $metadata);
-                }
-            });
-
-            $this->capabilityMarker = $marker;
-            $this->capabilities     = $capabilities;
+            $this->getEventManager()->attach('option', fn () => $this->capabilities = null);
         }
 
         return $this->capabilities;
     }
-
-    /* internal */
 
     /**
      * Removes directories recursive by namespace
@@ -1345,7 +1063,7 @@ final class Filesystem extends AbstractAdapter implements
             $dir . DIRECTORY_SEPARATOR . $prefix . '*',
             GLOB_ONLYDIR | GLOB_NOESCAPE | GLOB_NOSORT
         );
-        if (! $glob) {
+        if ($glob === false) {
             // On some systems glob returns false even on empty result
             return true;
         }

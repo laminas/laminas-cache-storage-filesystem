@@ -84,7 +84,7 @@ final class LocalFilesystemInteraction implements FilesystemInteractionInterface
 
             $fp = fopen($file, 'cb');
 
-            if ($umask) {
+            if ($umask !== null) {
                 umask($umask);
             }
 
@@ -141,7 +141,7 @@ final class LocalFilesystemInteraction implements FilesystemInteractionInterface
 
             $rs = file_put_contents($file, $contents, $flags);
 
-            if ($umask) {
+            if ($umask !== null) {
                 umask($umask);
             }
 
@@ -347,14 +347,14 @@ final class LocalFilesystemInteraction implements FilesystemInteractionInterface
     ): void {
         $umaskToRestore = null;
 
-        if ($umask) {
+        if ($umask !== null) {
             $umaskToRestore = umask($umask);
         }
 
         $created = mkdir($directory, $permissions, $recursive);
         $error   = ErrorHandler::stop();
 
-        if ($umaskToRestore) {
+        if ($umaskToRestore !== null) {
             umask($umaskToRestore);
         }
 

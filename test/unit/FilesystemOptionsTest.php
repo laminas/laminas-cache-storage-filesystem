@@ -35,8 +35,7 @@ use const PHP_OS;
  */
 final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
 {
-    /** @var string */
-    protected $keyPattern = FilesystemOptions::KEY_PATTERN;
+    protected string $keyPattern = FilesystemOptions::KEY_PATTERN;
 
     /**
      * @param array $out
@@ -229,5 +228,26 @@ final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
     {
         $this->options->setTagSuffix('.cache');
         self::assertSame('.cache', $this->options->getTagSuffix());
+    }
+
+    public function testSetKeyPatternThrowsInvalidArgumentExceptionWhenCalledWithNonPredefinedPattern(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->options->setKeyPattern('abc123');
+    }
+
+    public function testSetKeyPatternAllowEmptyString(): void
+    {
+        self::markTestSkipped('Test modifies key pattern which cannot be modified for filesystem adapter.');
+    }
+
+    public function testSetFromArrayWithoutPrioritizedOptions(): void
+    {
+        self::markTestSkipped('Test modifies key pattern which cannot be modified for filesystem adapter.');
+    }
+
+    public function testKeyPattern(): void
+    {
+        self::markTestSkipped('Test modifies key pattern which cannot be modified for filesystem adapter.');
     }
 }
