@@ -6,16 +6,15 @@ namespace Laminas\Cache\Storage\Adapter\Filesystem\Exception;
 
 use ErrorException;
 use Laminas\Cache\Exception\RuntimeException;
-use Laminas\Cache\Storage\Adapter\Filesystem;
 
 use function sprintf;
 
 final class MetadataException extends RuntimeException
 {
-    public const METADATA_ATIME    = Filesystem::METADATA_ATIME;
-    public const METADATA_CTIME    = Filesystem::METADATA_CTIME;
-    public const METADATA_MTIME    = Filesystem::METADATA_MTIME;
-    public const METADATA_FILESIZE = Filesystem::METADATA_FILESIZE;
+    public const METADATA_ATIME    = 'atime';
+    public const METADATA_CTIME    = 'ctime';
+    public const METADATA_MTIME    = 'mtime';
+    public const METADATA_FILESIZE = 'filesize';
 
     private ErrorException $error;
 

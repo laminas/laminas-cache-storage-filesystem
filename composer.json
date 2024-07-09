@@ -8,19 +8,19 @@
     "license": "BSD-3-Clause",
     "require": {
         "php": "~8.1.0 || ~8.2.0 || ~8.3.0",
-        "laminas/laminas-cache": "^3.10.0"
+        "laminas/laminas-cache": "^4.0"
     },
     "provide": {
-        "laminas/laminas-cache-storage-implementation": "1.0"
+        "laminas/laminas-cache-storage-implementation": "2.0"
     },
     "require-dev": {
         "ext-pcntl": "*",
         "ext-posix": "*",
-        "laminas/laminas-cache-storage-adapter-benchmark": "^1.1.0",
-        "laminas/laminas-cache-storage-adapter-test": "^2.0 || 2.0.x-dev",
+        "laminas/laminas-cache-storage-adapter-benchmark": "^2.0",
+        "laminas/laminas-cache-storage-adapter-test": "^4.0",
         "laminas/laminas-coding-standard": "~2.4",
-        "laminas/laminas-serializer": "^2.14.0",
-        "phpunit/phpunit": "^9.5.26",
+        "laminas/laminas-serializer": "^3.0",
+        "phpunit/phpunit": "^10.5",
         "psalm/plugin-phpunit": "^0.19.0",
         "vimeo/psalm": "^5.18"
     },

@@ -8,6 +8,8 @@ use Laminas\Cache\Storage\Adapter\Filesystem;
 use Laminas\Cache\Storage\Adapter\FilesystemOptions;
 use Laminas\Cache\Storage\Plugin\Serializer;
 use Laminas\Cache\Storage\StorageInterface;
+use Laminas\Serializer\AdapterPluginManager;
+use Laminas\ServiceManager\ServiceManager;
 use LaminasTest\Cache\Storage\Adapter\AbstractSimpleCacheIntegrationTest;
 
 use function assert;
@@ -18,13 +20,11 @@ use function tempnam;
 use function umask;
 use function unlink;
 
-class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
+final class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
 {
-    /** @var string */
-    private $tmpCacheDir;
+    private string $tmpCacheDir;
 
-    /** @var int */
-    protected $umask;
+    protected int $umask;
 
     private ?FilesystemOptions $options = null;
 
@@ -65,7 +65,7 @@ class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
     {
         $this->umask = umask();
 
-        if (getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR')) {
+        if (getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR') !== false) {
             $cacheDir = getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR');
         } else {
             $cacheDir = sys_get_temp_dir();
@@ -73,7 +73,7 @@ class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
 
         $this->tmpCacheDir = tempnam($cacheDir, 'laminas_cache_test_');
 
-        if (! $this->tmpCacheDir) {
+        if ($this->tmpCacheDir === false) {
             $this->fail("Can't create temporary cache directory-file.");
         } elseif (! unlink($this->tmpCacheDir)) {
             $this->fail("Can't remove temporary cache directory-file: {$this->tmpCacheDir}");
@@ -86,7 +86,7 @@ class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
         ]);
         $storage       = new Filesystem($this->options);
 
-        $storage->addPlugin(new Serializer());
+        $storage->addPlugin(new Serializer(new AdapterPluginManager(new ServiceManager())));
 
         return $storage;
     }
