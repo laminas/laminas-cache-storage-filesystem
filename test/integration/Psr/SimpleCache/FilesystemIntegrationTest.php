@@ -30,16 +30,9 @@ final class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
 
     protected function setUp(): void
     {
-        $ttlMessage       = 'Filesystem adapter does not honor TTL';
-        $keyMessage       = 'Filesystem adapter supports a subset of PSR-16 characters for keys';
-        $keyLengthMessage = 'Filesystem adapter supports only 64 characters for a cache key';
-
         $this->skippedTests = [
-            'testSetTtl'                => $ttlMessage,
-            'testSetMultipleTtl'        => $ttlMessage,
-            'testSetValidKeys'          => $keyMessage,
-            'testSetMultipleValidKeys'  => $keyMessage,
-            'testBasicUsageWithLongKey' => $keyLengthMessage,
+            'testBasicUsageWithLongKey' => 'Filesystem does only support a maximum of 255 characters for the'
+                . ' cache key but test generates a cache key with 300 characters which exceeds that limit',
         ];
 
         parent::setUp();

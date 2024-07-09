@@ -33,7 +33,6 @@ final class FilesystemIntegrationTest extends AbstractCacheItemPoolIntegrationTe
         $this->skippedTests = [
             'testBasicUsageWithLongKey' => 'Filesystem does only support a maximum of 255 characters for the'
                 . ' cache key but test generates a cache key with 300 characters which exceeds that limit',
-            'testExpiration'            => 'Filesystem adapter does not auto expire cache items',
         ];
 
         $cacheDirectory = tempnam(sys_get_temp_dir(), '');
