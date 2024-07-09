@@ -44,10 +44,8 @@ final class FilesystemOptions extends AdapterOptions
 
     /**
      * Permission creating new directories
-     *
-     * @var false|int
      */
-    private $dirPermission = 0700;
+    private false|int $dirPermission = 0700;
 
     /**
      * Lock files on writing
@@ -56,10 +54,8 @@ final class FilesystemOptions extends AdapterOptions
 
     /**
      * Permission creating new files
-     *
-     * @var false|int
      */
-    private $filePermission = 0600;
+    private false|int $filePermission = 0600;
 
     /**
      * Overwrite default key pattern
