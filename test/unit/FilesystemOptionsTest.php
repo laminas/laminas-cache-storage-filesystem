@@ -8,6 +8,7 @@ use Exception;
 use Laminas\Cache\Exception\InvalidArgumentException;
 use Laminas\Cache\Storage\Adapter\AdapterOptions;
 use Laminas\Cache\Storage\Adapter\FilesystemOptions;
+use stdClass;
 
 use function array_values;
 use function assert;
@@ -218,22 +219,16 @@ final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
         $this->options->setUmask(0100);
     }
 
-    public function testSuffixIsMutable(): void
-    {
-        $this->options->setSuffix('.cache');
-        self::assertSame('.cache', $this->options->getSuffix());
-    }
-
-    public function testTagSuffixIsMutable(): void
-    {
-        $this->options->setTagSuffix('.cache');
-        self::assertSame('.cache', $this->options->getTagSuffix());
-    }
-
     public function testSetKeyPatternThrowsInvalidArgumentExceptionWhenCalledWithNonPredefinedPattern(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->options->setKeyPattern('abc123');
+    }
+
+    public function testAcceptsUnserializableClasses(): void
+    {
+        $this->options->setUnserializableClasses([stdClass::class]);
+        self::assertSame([stdClass::class], $this->options->getUnserializableClasses());
     }
 
     public function testSetKeyPatternAllowEmptyString(): void

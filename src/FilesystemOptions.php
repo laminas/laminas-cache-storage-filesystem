@@ -30,32 +30,32 @@ final class FilesystemOptions extends AdapterOptions
      *
      * @var string|null The cache directory
      */
-    private ?string $cacheDir = null;
+    protected ?string $cacheDir = null;
 
     /**
      * Call clearstatcache enabled?
      */
-    private bool $clearStatCache = true;
+    protected bool $clearStatCache = true;
 
     /**
      * How much sub-directaries should be created?
      */
-    private int $dirLevel = 1;
+    protected int $dirLevel = 1;
 
     /**
      * Permission creating new directories
      */
-    private false|int $dirPermission = 0700;
+    protected false|int $dirPermission = 0700;
 
     /**
      * Lock files on writing
      */
-    private bool $fileLocking = true;
+    protected bool $fileLocking = true;
 
     /**
      * Permission creating new files
      */
-    private false|int $filePermission = 0600;
+    protected false|int $filePermission = 0600;
 
     /**
      * Overwrite default key pattern
@@ -65,32 +65,29 @@ final class FilesystemOptions extends AdapterOptions
     /**
      * Namespace separator
      */
-    private string $namespaceSeparator = '-';
+    protected string $namespaceSeparator = '-';
 
     /**
      * Don't get 'fileatime' as 'atime' on metadata
      */
-    private bool $noAtime = true;
+    protected bool $noAtime = true;
 
     /**
      * Don't get 'filectime' as 'ctime' on metadata
      */
-    private bool $noCtime = true;
+    protected bool $noCtime = true;
 
     /**
      * Umask to create files and directories
      */
-    private false|int $umask = false;
+    protected false|int $umask = false;
 
     /**
-     * Suffix for cache files
+     * Allowed classes to unserialize
+     *
+     * @var list<class-string>|bool
      */
-    private string $suffix = 'dat';
-
-    /**
-     * Suffix for tag files
-     */
-    private string $tagSuffix = 'tag';
+    protected bool|array $unserializableClasses = true;
 
     /**
      * @param iterable<string,mixed>|null $options
@@ -387,36 +384,19 @@ final class FilesystemOptions extends AdapterOptions
     }
 
     /**
-     * Get the suffix for cache files
+     * @return list<class-string>|bool
      */
-    public function getSuffix(): string
+    public function getUnserializableClasses(): bool|array
     {
-        return $this->suffix;
+        return $this->unserializableClasses;
     }
 
     /**
-     * Set the suffix for cache files
+     * @param non-empty-list<class-string>|bool $unserializableClasses
      */
-    public function setSuffix(string $suffix): self
+    public function setUnserializableClasses(bool|array $unserializableClasses): self
     {
-        $this->suffix = $suffix;
-        return $this;
-    }
-
-    /**
-     * Get the suffix for tag files
-     */
-    public function getTagSuffix(): string
-    {
-        return $this->tagSuffix;
-    }
-
-    /**
-     * Set the suffix for cache files
-     */
-    public function setTagSuffix(string $tagSuffix): self
-    {
-        $this->tagSuffix = $tagSuffix;
+        $this->unserializableClasses = $unserializableClasses;
         return $this;
     }
 

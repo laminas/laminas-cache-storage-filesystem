@@ -29,24 +29,15 @@
       <code><![CDATA[$pathname]]></code>
       <code><![CDATA[$pathname]]></code>
       <code><![CDATA[$pathname]]></code>
-      <code><![CDATA[$pathname]]></code>
     </PossiblyInvalidArgument>
     <PossiblyUndefinedVariable>
       <code><![CDATA[$diff]]></code>
       <code><![CDATA[$diff]]></code>
     </PossiblyUndefinedVariable>
     <PossiblyUnusedReturnValue>
-      <code><![CDATA[array]]></code>
-      <code><![CDATA[array]]></code>
-      <code><![CDATA[bool]]></code>
-      <code><![CDATA[bool]]></code>
-      <code><![CDATA[bool]]></code>
       <code><![CDATA[bool]]></code>
       <code><![CDATA[bool]]></code>
     </PossiblyUnusedReturnValue>
-    <UnsupportedReferenceUsage>
-      <code><![CDATA[$contents[$this->formatFilename($filespec)] = &$value]]></code>
-    </UnsupportedReferenceUsage>
     <UnusedReturnValue>
       <code><![CDATA[bool]]></code>
     </UnusedReturnValue>
