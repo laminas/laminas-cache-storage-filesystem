@@ -12,6 +12,7 @@ use Laminas\Cache\Storage\StorageInterface;
 use Laminas\Serializer\AdapterPluginManager;
 use Laminas\ServiceManager\ServiceManager;
 use LaminasTest\Cache\Storage\Adapter\AbstractCacheItemPoolIntegrationTest;
+use LaminasTest\Cache\Storage\Adapter\ModifiableClockTrait;
 
 use function assert;
 use function mkdir;
@@ -26,6 +27,8 @@ use function unlink;
  */
 final class FilesystemIntegrationTest extends AbstractCacheItemPoolIntegrationTest
 {
+    use ModifiableClockTrait;
+
     private string $cacheDirectory;
 
     protected function setUp(): void
@@ -47,7 +50,7 @@ final class FilesystemIntegrationTest extends AbstractCacheItemPoolIntegrationTe
     {
         $storage = new Filesystem([
             'cache_dir' => $this->cacheDirectory,
-        ]);
+        ], clock: $this->getClock());
 
         $storage->addPlugin(new Serializer(new AdapterPluginManager(new ServiceManager())));
         return $storage;

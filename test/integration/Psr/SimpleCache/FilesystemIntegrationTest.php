@@ -11,6 +11,7 @@ use Laminas\Cache\Storage\StorageInterface;
 use Laminas\Serializer\AdapterPluginManager;
 use Laminas\ServiceManager\ServiceManager;
 use LaminasTest\Cache\Storage\Adapter\AbstractSimpleCacheIntegrationTest;
+use LaminasTest\Cache\Storage\Adapter\ModifiableClockTrait;
 
 use function assert;
 use function getenv;
@@ -22,6 +23,8 @@ use function unlink;
 
 final class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
 {
+    use ModifiableClockTrait;
+
     private string $tmpCacheDir;
 
     protected int $umask;
@@ -77,7 +80,7 @@ final class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
         $this->options = new FilesystemOptions([
             'cache_dir' => $this->tmpCacheDir,
         ]);
-        $storage       = new Filesystem($this->options);
+        $storage       = new Filesystem($this->options, clock: $this->getClock());
 
         $storage->addPlugin(new Serializer(new AdapterPluginManager(new ServiceManager())));
 
