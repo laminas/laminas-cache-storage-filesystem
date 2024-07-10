@@ -25,6 +25,7 @@ use Laminas\Cache\Storage\Event;
 use Laminas\Cache\Storage\FlushableInterface;
 use Laminas\Cache\Storage\IterableInterface;
 use Laminas\Cache\Storage\OptimizableInterface;
+use Laminas\Cache\Storage\Plugin\Serializer;
 use Laminas\Cache\Storage\TaggableInterface;
 use Laminas\Cache\Storage\TotalSpaceCapableInterface;
 use Laminas\Stdlib\ErrorHandler;
@@ -1087,6 +1088,10 @@ final class Filesystem extends AbstractMetadataCapableAdapter implements
             throw new Exception\RuntimeException('Malformed cache file contents.');
         }
 
+        if ($this->isSerializerAttached()) {
+            return $parts[1];
+        }
+
         $options = $this->getOptions();
         ErrorHandler::start(E_NOTICE | E_WARNING);
         $cachedValue = unserialize($parts[1], ['allowed_classes' => $options->getUnserializableClasses()]);
@@ -1236,7 +1241,7 @@ final class Filesystem extends AbstractMetadataCapableAdapter implements
     private function createCacheValue(mixed $value, int|float $ttl): string
     {
         $expiresAt = $this->calculateExpireTimestampBasedOnTtl($ttl);
-        return $expiresAt . "\n" . serialize($value);
+        return $expiresAt . "\n" . $this->normalizeCacheValue($value);
     }
 
     /**
@@ -1281,5 +1286,25 @@ final class Filesystem extends AbstractMetadataCapableAdapter implements
         $locking = $options->getFileLocking();
 
         return $this->filesystem->read($file, $locking, $nonBlocking, $wouldblock);
+    }
+
+    private function normalizeCacheValue(mixed $value): string
+    {
+        if ($this->isSerializerAttached()) {
+            return $value;
+        }
+
+        return serialize($value);
+    }
+
+    private function isSerializerAttached(): bool
+    {
+        foreach ($this->getPluginRegistry() as $plugin) {
+            if ($plugin instanceof Serializer) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
