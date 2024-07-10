@@ -100,9 +100,11 @@ final class FilesystemOptions extends AdapterOptions
             $this->dirPermission  = false;
         }
 
-        $this->setCacheDir(null);
-
         parent::__construct($options);
+
+        if ($this->cacheDir === null) {
+            $this->setCacheDir(null);
+        }
     }
 
     public function setKeyPattern(string $keyPattern): self
