@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "141105eb2e5d6a13de0fd890e9d3d1d4",
+    "content-hash": "74209fed615f20db81599c5d46395a4d",
     "packages": [
         {
             "name": "brick/varexporter",
@@ -1613,16 +1613,16 @@
         },
         {
             "name": "laminas/laminas-cache-storage-adapter-test",
-            "version": "4.0.1",
+            "version": "4.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laminas/laminas-cache-storage-adapter-test.git",
-                "reference": "7d052d8ca221cda3e7afdc5beb49ab884b6c726f"
+                "reference": "49ace93ed9837523160320a749966ca622c56856"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laminas/laminas-cache-storage-adapter-test/zipball/7d052d8ca221cda3e7afdc5beb49ab884b6c726f",
-                "reference": "7d052d8ca221cda3e7afdc5beb49ab884b6c726f",
+                "url": "https://api.github.com/repos/laminas/laminas-cache-storage-adapter-test/zipball/49ace93ed9837523160320a749966ca622c56856",
+                "reference": "49ace93ed9837523160320a749966ca622c56856",
                 "shasum": ""
             },
             "require": {
@@ -1630,6 +1630,7 @@
                 "php": "~8.1.0 || ~8.2.0 || ~8.3.0",
                 "phpunit/phpunit": "^10.5",
                 "psr/cache": "^2.0 || ^3.0",
+                "psr/clock": "^1.0",
                 "psr/container": "^2.0",
                 "psr/simple-cache": "^2.0 || ^3.0"
             },
@@ -1668,7 +1669,7 @@
                     "type": "community_bridge"
                 }
             ],
-            "time": "2024-06-21T20:30:05+00:00"
+            "time": "2024-07-10T14:29:34+00:00"
         },
         {
             "name": "laminas/laminas-coding-standard",

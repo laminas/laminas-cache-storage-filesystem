@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace LaminasTest\Cache\Storage\Adapter;
 
 use __PHP_Incomplete_Class;
-use DateTimeZone;
 use Laminas\Cache\Exception\RuntimeException;
 use Laminas\Cache\Storage\Adapter\Filesystem;
 use Laminas\Cache\Storage\Adapter\FilesystemOptions;
 use Laminas\Cache\Storage\Plugin\ExceptionHandler;
 use Laminas\Cache\Storage\Plugin\PluginOptions;
-use LaminasTest\Cache\Storage\Adapter\Filesystem\TestAsset\ModifiableClock;
 use LaminasTest\Cache\Storage\Adapter\Filesystem\TestAsset\SerializableObject;
 use stdClass;
 
@@ -39,11 +37,11 @@ use function unlink;
  */
 final class FilesystemTest extends AbstractCommonAdapterTest
 {
+    use ModifiableClockTrait;
+
     protected string $tmpCacheDir;
 
     protected int $umask;
-
-    private ModifiableClock $clock;
 
     protected function setUp(): void
     {
@@ -66,11 +64,10 @@ final class FilesystemTest extends AbstractCommonAdapterTest
             $this->fail("Can't create temporary cache directory: {$err['message']}");
         }
 
-        $this->clock   = new ModifiableClock(new DateTimeZone('UTC'));
         $this->options = new FilesystemOptions([
             'cache_dir' => $this->tmpCacheDir,
         ]);
-        $this->storage = new Filesystem($this->options, clock: $this->clock);
+        $this->storage = new Filesystem($this->options, clock: $this->getClock());
 
         parent::setUp();
     }
@@ -160,7 +157,7 @@ final class FilesystemTest extends AbstractCommonAdapterTest
             $this->fail('Could not find cache dir');
         }
         chmod($dirs[0], 0500); //make directory rx, unlink should fail
-        $this->clock->addSeconds(1);
+        $this->advanceTime(1);
 
         $callbackWasCalled = false;
         $callback          = static function () use (&$callbackWasCalled): void {
