@@ -16,6 +16,7 @@ use function decoct;
 use function disk_free_space;
 use function disk_total_space;
 use function fclose;
+use function fgets;
 use function file_exists;
 use function file_get_contents;
 use function file_put_contents;
@@ -29,10 +30,10 @@ use function ftruncate;
 use function fwrite;
 use function is_dir;
 use function mkdir;
+use function rtrim;
 use function sprintf;
 use function stream_get_contents;
 use function strlen;
-use function touch;
 use function umask;
 use function unlink;
 
@@ -84,7 +85,7 @@ final class LocalFilesystemInteraction implements FilesystemInteractionInterface
 
             $fp = fopen($file, 'cb');
 
-            if ($umask) {
+            if ($umask !== null) {
                 umask($umask);
             }
 
@@ -141,7 +142,7 @@ final class LocalFilesystemInteraction implements FilesystemInteractionInterface
 
             $rs = file_put_contents($file, $contents, $flags);
 
-            if ($umask) {
+            if ($umask !== null) {
                 umask($umask);
             }
 
@@ -322,23 +323,6 @@ final class LocalFilesystemInteraction implements FilesystemInteractionInterface
         return (int) $bytes;
     }
 
-    public function touch(string $file): bool
-    {
-        ErrorHandler::start();
-        $touch = touch($file);
-        $error = ErrorHandler::stop();
-        if (! $touch) {
-            throw new RuntimeException("Error touching file '{$file}'", 0, $error);
-        }
-
-        return true;
-    }
-
-    public function umask(int $umask): int
-    {
-        return umask($umask);
-    }
-
     public function createDirectory(
         string $directory,
         int $permissions,
@@ -347,14 +331,14 @@ final class LocalFilesystemInteraction implements FilesystemInteractionInterface
     ): void {
         $umaskToRestore = null;
 
-        if ($umask) {
+        if ($umask !== null) {
             $umaskToRestore = umask($umask);
         }
 
         $created = mkdir($directory, $permissions, $recursive);
         $error   = ErrorHandler::stop();
 
-        if ($umaskToRestore) {
+        if ($umaskToRestore !== null) {
             umask($umaskToRestore);
         }
 
@@ -374,5 +358,58 @@ final class LocalFilesystemInteraction implements FilesystemInteractionInterface
         }
 
         ErrorHandler::stop();
+    }
+
+    public function getFirstLineOfFile(string $file, bool $lock, bool $block, ?bool &$wouldBlock): string
+    {
+        $wouldBlock = null;
+        ErrorHandler::start();
+
+        $fp = fopen($file, 'rb');
+        if ($fp === false) {
+            $err = ErrorHandler::stop();
+            throw new RuntimeException("Error opening file '{$file}'", 0, $err);
+        }
+
+        $locked = false;
+        if ($lock === true && $block === true) {
+            $wouldBlockFromFileLock = null;
+            $locked                 = flock($fp, LOCK_SH | LOCK_NB, $wouldBlockFromFileLock);
+            if ($wouldBlockFromFileLock) {
+                fclose($fp);
+                ErrorHandler::stop();
+                $wouldBlock = true;
+
+                return '';
+            }
+        } elseif ($lock === true) {
+            $locked = flock($fp, LOCK_SH);
+        }
+
+        if ($lock === true && ! $locked) {
+            fclose($fp);
+            $err = ErrorHandler::stop();
+            throw new RuntimeException("Error locking file '{$file}'", 0, $err);
+        }
+
+        $res = fgets($fp);
+        if ($res === false) {
+            if ($locked) {
+                flock($fp, LOCK_UN);
+            }
+
+            fclose($fp);
+            $err = ErrorHandler::stop();
+            throw new RuntimeException('Error getting stream contents', 0, $err);
+        }
+
+        if ($locked) {
+            flock($fp, LOCK_UN);
+        }
+        fclose($fp);
+
+        ErrorHandler::stop();
+
+        return rtrim($res, "\n");
     }
 }

@@ -8,6 +8,8 @@ use Laminas\Cache\Storage\Adapter\Filesystem;
 use Laminas\Cache\Storage\Adapter\FilesystemOptions;
 use Laminas\Cache\Storage\Plugin\Serializer;
 use Laminas\Cache\Storage\StorageInterface;
+use Laminas\Serializer\AdapterPluginManager;
+use Laminas\ServiceManager\ServiceManager;
 use LaminasTest\Cache\Storage\Adapter\AbstractSimpleCacheIntegrationTest;
 
 use function assert;
@@ -18,28 +20,19 @@ use function tempnam;
 use function umask;
 use function unlink;
 
-class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
+final class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
 {
-    /** @var string */
-    private $tmpCacheDir;
+    private string $tmpCacheDir;
 
-    /** @var int */
-    protected $umask;
+    protected int $umask;
 
     private ?FilesystemOptions $options = null;
 
     protected function setUp(): void
     {
-        $ttlMessage       = 'Filesystem adapter does not honor TTL';
-        $keyMessage       = 'Filesystem adapter supports a subset of PSR-16 characters for keys';
-        $keyLengthMessage = 'Filesystem adapter supports only 64 characters for a cache key';
-
         $this->skippedTests = [
-            'testSetTtl'                => $ttlMessage,
-            'testSetMultipleTtl'        => $ttlMessage,
-            'testSetValidKeys'          => $keyMessage,
-            'testSetMultipleValidKeys'  => $keyMessage,
-            'testBasicUsageWithLongKey' => $keyLengthMessage,
+            'testBasicUsageWithLongKey' => 'Filesystem does only support a maximum of 255 characters for the'
+                . ' cache key but test generates a cache key with 300 characters which exceeds that limit',
         ];
 
         parent::setUp();
@@ -65,7 +58,7 @@ class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
     {
         $this->umask = umask();
 
-        if (getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR')) {
+        if (getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR') !== false) {
             $cacheDir = getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR');
         } else {
             $cacheDir = sys_get_temp_dir();
@@ -73,7 +66,7 @@ class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
 
         $this->tmpCacheDir = tempnam($cacheDir, 'laminas_cache_test_');
 
-        if (! $this->tmpCacheDir) {
+        if ($this->tmpCacheDir === false) {
             $this->fail("Can't create temporary cache directory-file.");
         } elseif (! unlink($this->tmpCacheDir)) {
             $this->fail("Can't remove temporary cache directory-file: {$this->tmpCacheDir}");
@@ -86,7 +79,7 @@ class FilesystemIntegrationTest extends AbstractSimpleCacheIntegrationTest
         ]);
         $storage       = new Filesystem($this->options);
 
-        $storage->addPlugin(new Serializer());
+        $storage->addPlugin(new Serializer(new AdapterPluginManager(new ServiceManager())));
 
         return $storage;
     }
