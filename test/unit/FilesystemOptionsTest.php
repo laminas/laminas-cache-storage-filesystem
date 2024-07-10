@@ -29,12 +29,15 @@ use function unlink;
 use const DIRECTORY_SEPARATOR;
 use const PHP_EOL;
 use const PHP_OS;
+use const PHP_OS_FAMILY;
 
 /**
  * @template-extends AbstractAdapterOptionsTest<FilesystemOptions>
  */
 final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
 {
+    private const MACOS_FAMILY = 'Darwin';
+
     /** @var string */
     protected $keyPattern = FilesystemOptions::KEY_PATTERN;
 
@@ -53,6 +56,12 @@ final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
     protected function createAdapterOptions(): AdapterOptions
     {
         return new FilesystemOptions();
+    }
+
+    public function testSetCacheDirToSystemsTempDirWhenNoCacheDirIsProvided(): void
+    {
+        $options = new FilesystemOptions();
+        self::assertEquals(realpath(sys_get_temp_dir()), $options->getCacheDir());
     }
 
     public function testSetCacheDirToSystemsTempDirWithNull(): void
@@ -229,5 +238,30 @@ final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
     {
         $this->options->setTagSuffix('.cache');
         self::assertSame('.cache', $this->options->getTagSuffix());
+    }
+
+    /**
+     * The test asset script does provide a temporary directory and thus, the nonexistent system temp dir should
+     * not be used at all.
+     */
+    public function testFilesystemOptionsInstantiationWithNonExistentSystemTemporaryDirectory(): void
+    {
+        /**
+         * Due to the usage of `realpath` {@see FilesystemOptions::normalizeCacheDirectory()}, the directory is changed
+         * depending on the host system. As there might be developers using MacOS brew PHP to execute these tests, we
+         * allow MacOS `/private/tmp` as well.
+         */
+        $expectedTemporaryDirectory = match (PHP_OS_FAMILY) {
+            default => '/tmp',
+            self::MACOS_FAMILY => '/private/tmp',
+        };
+
+        $cacheDirectoryFromOptions = exec(
+            'TMPDIR=nonexistent php test/unit/Filesystem/TestAsset/instantiate_filesystem_options_with_cache_dir.php',
+            $output,
+            $exitCode,
+        );
+        self::assertSame(0, $exitCode);
+        self::assertSame($expectedTemporaryDirectory, $cacheDirectoryFromOptions);
     }
 }
