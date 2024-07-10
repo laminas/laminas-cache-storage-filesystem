@@ -32,7 +32,7 @@ $ composer require laminas/laminas-cache-storage-adapter-filesystem
 
 ## Documentation
 
-Browse the documentation online at https://docs.laminas.dev/laminas-cache-storage-adapter-filesystem/
+Browse the documentation online at https://docs.laminas.dev/laminas-cache/storage/adapter/#filesystem-adapter
 
 ## Support
 
