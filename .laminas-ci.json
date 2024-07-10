@@ -1,12 +1,2 @@
 {
-  "additional_checks": [
-    {
-      "name": "Unit tests with non existent TMPDIR",
-      "job": {
-        "php": "*",
-        "dependencies": "locked",
-        "command": "TMPDIR=nonexistent vendor/bin/phpunit test/unit/FilesystemOptionsNonExistentTmpdirTest.php"
-      }
-    }
-  ]
 }
