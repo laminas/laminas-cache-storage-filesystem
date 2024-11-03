@@ -11,7 +11,7 @@ use function sprintf;
 
 final class UnlinkException extends RuntimeException
 {
-    private ErrorException $error;
+    private readonly ErrorException $error;
 
     public function __construct(string $path, ErrorException $error)
     {
