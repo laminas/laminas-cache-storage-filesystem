@@ -17,11 +17,6 @@ use function substr;
 final class FilesystemIterator implements IteratorInterface
 {
     /**
-     * The Filesystem storage instance
-     */
-    private Filesystem $storage;
-
-    /**
      * The iterator mode
      *
      * @var IteratorInterface::CURRENT_AS_*
@@ -31,24 +26,26 @@ final class FilesystemIterator implements IteratorInterface
     /**
      * The GlobIterator instance
      */
-    private GlobIterator $globIterator;
-
-    /**
-     * The namespace sprefix
-     */
-    private string $prefix;
+    private readonly GlobIterator $globIterator;
 
     /**
      * String length of namespace prefix
      */
-    private int $prefixLength;
+    private readonly int $prefixLength;
 
-    public function __construct(Filesystem $storage, string $path, string $prefix)
-    {
-        $this->storage      = $storage;
+    public function __construct(
+        /**
+         * The Filesystem storage instance
+         */
+        private readonly Filesystem $storage,
+        string $path,
+        /**
+         * The namespace sprefix
+         */
+        private readonly string $prefix
+    ) {
         $this->globIterator = new GlobIterator($path, GlobIterator::KEY_AS_FILENAME);
-        $this->prefix       = $prefix;
-        $this->prefixLength = strlen($prefix);
+        $this->prefixLength = strlen($this->prefix);
     }
 
     /**
