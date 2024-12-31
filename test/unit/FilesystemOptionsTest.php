@@ -43,7 +43,6 @@ final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
     protected string $keyPattern = FilesystemOptions::KEY_PATTERN;
 
     /**
-     * @param array $out
      * @psalm-assert list<string> $out
      */
     private static function assertAllString(array $out): void
