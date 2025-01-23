@@ -104,8 +104,8 @@ final class Filesystem extends AbstractMetadataCapableAdapter implements
      */
     private string $lastFileSpec = '';
 
-    private FilesystemInteractionInterface $filesystem;
-    private ClockInterface $clock;
+    private readonly FilesystemInteractionInterface $filesystem;
+    private readonly ClockInterface $clock;
 
     /**
      * @param  null|iterable<string,mixed>|FilesystemOptions $options

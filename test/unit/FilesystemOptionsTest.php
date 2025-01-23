@@ -21,6 +21,7 @@ use function mkdir;
 use function realpath;
 use function rmdir;
 use function str_replace;
+use function str_starts_with;
 use function strpos;
 use function substr;
 use function sys_get_temp_dir;
@@ -42,7 +43,6 @@ final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
     protected string $keyPattern = FilesystemOptions::KEY_PATTERN;
 
     /**
-     * @param array $out
      * @psalm-assert list<string> $out
      */
     private static function assertAllString(array $out): void
@@ -99,7 +99,7 @@ final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
 
     public function testSetCacheDirNotWritableException(): void
     {
-        if (substr(PHP_OS, 0, 3) === 'WIN') {
+        if (str_starts_with(PHP_OS, 'WIN')) {
             self::markTestSkipped('Not testable on windows');
         } else {
             $out = [];
@@ -131,7 +131,7 @@ final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
 
     public function testSetCacheDirNotReadableException(): void
     {
-        if (substr(PHP_OS, 0, 3) === 'WIN') {
+        if (str_starts_with(PHP_OS, 'WIN')) {
             self::markTestSkipped('Not testable on windows');
         } else {
             @exec('whoami 2>&1', $out, $ret);
