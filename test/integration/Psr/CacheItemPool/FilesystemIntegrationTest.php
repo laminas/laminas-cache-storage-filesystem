@@ -4,19 +4,55 @@ declare(strict_types=1);
 
 namespace LaminasTest\Cache\Psr\CacheItemPool;
 
-use Laminas\Cache\Psr\CacheItemPool\CacheException;
-use Laminas\Cache\Psr\CacheItemPool\CacheItemPoolDecorator;
 use Laminas\Cache\Storage\Adapter\Filesystem;
+use Laminas\Cache\Storage\Adapter\FilesystemOptions;
+use Laminas\Cache\Storage\FlushableInterface;
 use Laminas\Cache\Storage\Plugin\Serializer;
-use PHPUnit\Framework\TestCase;
+use Laminas\Cache\Storage\StorageInterface;
+use Laminas\Serializer\AdapterPluginManager;
+use Laminas\ServiceManager\ServiceManager;
+use LaminasTest\Cache\Storage\Adapter\AbstractCacheItemPoolIntegrationTest;
+use LaminasTest\Cache\Storage\Adapter\ModifiableClockTrait;
 
-class FilesystemIntegrationTest extends TestCase
+use function assert;
+use function mkdir;
+use function sys_get_temp_dir;
+use function tempnam;
+use function unlink;
+
+/**
+ * @uses FlushableInterface
+ *
+ * @template-extends AbstractCacheItemPoolIntegrationTest<FilesystemOptions>
+ */
+final class FilesystemIntegrationTest extends AbstractCacheItemPoolIntegrationTest
 {
-    public function testAdapterNotSupported(): void
+    use ModifiableClockTrait;
+
+    private string $cacheDirectory;
+
+    protected function setUp(): void
     {
-        $this->expectException(CacheException::class);
-        $storage = new Filesystem();
-        $storage->addPlugin(new Serializer());
-        new CacheItemPoolDecorator($storage);
+        $this->skippedTests = [
+            'testBasicUsageWithLongKey' => 'Filesystem does only support a maximum of 255 characters for the'
+                . ' cache key but test generates a cache key with 300 characters which exceeds that limit',
+        ];
+
+        $cacheDirectory = tempnam(sys_get_temp_dir(), '');
+        unlink($cacheDirectory);
+        assert(mkdir($cacheDirectory, 0777, true) === true);
+        $this->cacheDirectory = $cacheDirectory;
+
+        parent::setUp();
+    }
+
+    protected function createStorage(): StorageInterface&FlushableInterface
+    {
+        $storage = new Filesystem([
+            'cache_dir' => $this->cacheDirectory,
+        ], clock: $this->getClock());
+
+        $storage->addPlugin(new Serializer(new AdapterPluginManager(new ServiceManager())));
+        return $storage;
     }
 }

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Laminas\Cache\Storage\Adapter\Filesystem;
 
-use Interop\Container\ContainerInterface; // phpcs:disable WebimpressCodingStandard.PHP.CorrectClassNameCase
 use Laminas\Cache\Storage\Adapter\Filesystem;
 use Laminas\Cache\Storage\AdapterPluginManager;
 use Laminas\ServiceManager\Factory\InvokableFactory;
+use Psr\Container\ContainerInterface;
 
 use function assert;
 

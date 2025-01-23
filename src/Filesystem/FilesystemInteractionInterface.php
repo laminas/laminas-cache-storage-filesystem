@@ -16,7 +16,7 @@ interface FilesystemInteractionInterface
     public function delete(string $file): bool;
 
     /**
-     * @throws RuntimeException
+     * @throws RuntimeException If the file could not be written or locked.
      */
     public function write(
         string $file,
@@ -29,50 +29,48 @@ interface FilesystemInteractionInterface
     ): bool;
 
     /**
-     * @throws RuntimeException
+     * @throws RuntimeException If the file could not be read or locked.
+     */
+    public function getFirstLineOfFile(string $file, bool $lock, bool $block, ?bool &$wouldBlock): string;
+
+    /**
+     * @throws RuntimeException If the file could not be read or locked.
      */
     public function read(string $file, bool $lock, bool $block, ?bool &$wouldBlock): string;
 
     public function exists(string $file): bool;
 
     /**
-     * @throws MetadataException
+     * @throws MetadataException If the metadata could not be read.
      */
     public function lastModifiedTime(string $file): int;
 
     /**
-     * @throws MetadataException
+     * @throws MetadataException If the metadata could not be read.
      */
     public function lastAccessedTime(string $file): int;
 
     /**
-     * @throws MetadataException
+     * @throws MetadataException If the metadata could not be read.
      */
     public function createdTime(string $file): int;
 
     /**
-     * @throws MetadataException
+     * @throws MetadataException If the metadata could not be read.
      */
     public function filesize(string $file): int;
 
     public function clearStatCache(): void;
 
     /**
-     * @throws RuntimeException
+     * @throws RuntimeException If the free space could not be detected.
      */
     public function availableBytes(string $directory): int;
 
     /**
-     * @throws RuntimeException
+     * @throws RuntimeException If the total bytes could not be detected.
      */
     public function totalBytes(string $directory): int;
-
-    public function touch(string $file): bool;
-
-    /**
-     * @return int The previous set umask.
-     */
-    public function umask(int $umask): int;
 
     public function createDirectory(
         string $directory,

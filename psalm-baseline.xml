@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<files psalm-version="5.26.1@d747f6500b38ac4f7dfc5edbcae6e4b637d7add0">
+<files psalm-version="5.25.0@01a8eb06b9e9cc6cfb6a320bf9fb14331919d505">
   <file src="benchmark/FilesystemStorageAdapterBench.php">
     <UnusedClass>
       <code><![CDATA[FilesystemStorageAdapterBench]]></code>
@@ -13,67 +13,16 @@
     </ImplicitToStringCast>
     <MissingClosureParamType>
       <code><![CDATA[$dir]]></code>
-      <code><![CDATA[$event]]></code>
-      <code><![CDATA[$event]]></code>
     </MissingClosureParamType>
-    <MixedArgument>
-      <code><![CDATA[$key]]></code>
-      <code><![CDATA[$params['namespace_separator']]]></code>
-    </MixedArgument>
     <MixedArgumentTypeCoercion>
-      <code><![CDATA[$metadata]]></code>
+      <code><![CDATA[new ArrayObject()]]></code>
+      <code><![CDATA[new ArrayObject()]]></code>
+      <code><![CDATA[new ArrayObject()]]></code>
     </MixedArgumentTypeCoercion>
-    <MixedArrayAccess>
-      <code><![CDATA[$params['namespace_separator']]]></code>
-    </MixedArrayAccess>
-    <MixedAssignment>
-      <code><![CDATA[$content]]></code>
-      <code><![CDATA[$contents[$this->formatFilename($filespec)]]]></code>
-      <code><![CDATA[$key]]></code>
-      <code><![CDATA[$params]]></code>
-      <code><![CDATA[$params]]></code>
-      <code><![CDATA[$value]]></code>
-    </MixedAssignment>
-    <MixedInferredReturnType>
-      <code><![CDATA[FilesystemOptions]]></code>
-      <code><![CDATA[bool]]></code>
-      <code><![CDATA[bool]]></code>
-      <code><![CDATA[bool]]></code>
-    </MixedInferredReturnType>
-    <MixedMethodCall>
-      <code><![CDATA[getParams]]></code>
-      <code><![CDATA[getParams]]></code>
-    </MixedMethodCall>
     <MixedOperand>
       <code><![CDATA[$dir]]></code>
     </MixedOperand>
-    <MixedReturnStatement>
-      <code><![CDATA[$this->options]]></code>
-      <code><![CDATA[$this->triggerException(
-                __FUNCTION__,
-                new ArrayObject(),
-                $result,
-                new Exception\RuntimeException("Failed to clear items of namespace '{$namespace}'", 0, $err)
-            )]]></code>
-      <code><![CDATA[$this->triggerException(
-                __FUNCTION__,
-                new ArrayObject(),
-                $result,
-                new Exception\RuntimeException("Failed to remove files of '{$path}'", 0, $err)
-            )]]></code>
-      <code><![CDATA[$this->triggerException(
-                __FUNCTION__,
-                new ArrayObject(),
-                $result,
-                new Exception\RuntimeException('Failed to clear expired items', 0, $error)
-            )]]></code>
-    </MixedReturnStatement>
-    <MoreSpecificImplementedParamType>
-      <code><![CDATA[$options]]></code>
-      <code><![CDATA[$options]]></code>
-    </MoreSpecificImplementedParamType>
     <PossiblyInvalidArgument>
-      <code><![CDATA[$pathname]]></code>
       <code><![CDATA[$pathname]]></code>
       <code><![CDATA[$pathname]]></code>
       <code><![CDATA[$pathname]]></code>
@@ -86,31 +35,9 @@
       <code><![CDATA[$diff]]></code>
     </PossiblyUndefinedVariable>
     <PossiblyUnusedReturnValue>
-      <code><![CDATA[array]]></code>
-      <code><![CDATA[array]]></code>
-      <code><![CDATA[bool]]></code>
-      <code><![CDATA[bool]]></code>
-      <code><![CDATA[bool]]></code>
-      <code><![CDATA[bool]]></code>
       <code><![CDATA[bool]]></code>
       <code><![CDATA[bool]]></code>
     </PossiblyUnusedReturnValue>
-    <PropertyNotSetInConstructor>
-      <code><![CDATA[Filesystem]]></code>
-    </PropertyNotSetInConstructor>
-    <RedundantCastGivenDocblockType>
-      <code><![CDATA[(string) $namespace]]></code>
-      <code><![CDATA[(string) $prefix]]></code>
-    </RedundantCastGivenDocblockType>
-    <RiskyTruthyFalsyComparison>
-      <code><![CDATA[! $glob]]></code>
-    </RiskyTruthyFalsyComparison>
-    <UnsupportedPropertyReferenceUsage>
-      <code><![CDATA[$totalSpace = &$this->totalSpace]]></code>
-    </UnsupportedPropertyReferenceUsage>
-    <UnsupportedReferenceUsage>
-      <code><![CDATA[$contents[$this->formatFilename($filespec)] = &$value]]></code>
-    </UnsupportedReferenceUsage>
     <UnusedReturnValue>
       <code><![CDATA[bool]]></code>
     </UnusedReturnValue>
@@ -124,14 +51,6 @@
       <code><![CDATA[$name]]></code>
     </UnusedParam>
   </file>
-  <file src="src/Filesystem/LocalFilesystemInteraction.php">
-    <RiskyTruthyFalsyComparison>
-      <code><![CDATA[$umask]]></code>
-      <code><![CDATA[$umask]]></code>
-      <code><![CDATA[$umask]]></code>
-      <code><![CDATA[$umaskToRestore]]></code>
-    </RiskyTruthyFalsyComparison>
-  </file>
   <file src="src/FilesystemIterator.php">
     <RedundantCastGivenDocblockType>
       <code><![CDATA[(int) $mode]]></code>
@@ -141,9 +60,6 @@
     </UnusedProperty>
   </file>
   <file src="src/FilesystemOptions.php">
-    <MixedArgumentTypeCoercion>
-      <code><![CDATA[$options]]></code>
-    </MixedArgumentTypeCoercion>
     <PossiblyInvalidPropertyAssignmentValue>
       <code><![CDATA[$dirPermission]]></code>
       <code><![CDATA[$filePermission]]></code>
@@ -154,26 +70,13 @@
       <code><![CDATA[setFileLocking]]></code>
       <code><![CDATA[setNamespaceSeparator]]></code>
     </PossiblyUnusedMethod>
-    <RedundantCastGivenDocblockType>
-      <code><![CDATA[(int) $dirPermission]]></code>
-      <code><![CDATA[(int) $filePermission]]></code>
-      <code><![CDATA[(int) $umask]]></code>
-    </RedundantCastGivenDocblockType>
   </file>
   <file src="test/integration/Psr/SimpleCache/FilesystemIntegrationTest.php">
     <PossiblyFalseArgument>
       <code><![CDATA[$cacheDir]]></code>
     </PossiblyFalseArgument>
-    <RiskyTruthyFalsyComparison>
-      <code><![CDATA[! $this->tmpCacheDir]]></code>
-      <code><![CDATA[getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR')]]></code>
-    </RiskyTruthyFalsyComparison>
   </file>
   <file src="test/unit/FilesystemTest.php">
-    <MixedOperand>
-      <code><![CDATA[$meta['filespec']]]></code>
-      <code><![CDATA[$meta['filespec']]]></code>
-    </MixedOperand>
     <PossiblyFalseArgument>
       <code><![CDATA[$cacheDir]]></code>
     </PossiblyFalseArgument>
@@ -181,10 +84,6 @@
       <code><![CDATA[$err['message']]]></code>
       <code><![CDATA[$err['message']]]></code>
     </PossiblyNullArrayAccess>
-    <RiskyTruthyFalsyComparison>
-      <code><![CDATA[! $this->tmpCacheDir]]></code>
-      <code><![CDATA[getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR')]]></code>
-    </RiskyTruthyFalsyComparison>
     <UnusedVariable>
       <code><![CDATA[$glob]]></code>
     </UnusedVariable>

@@ -4,41 +4,41 @@ declare(strict_types=1);
 
 namespace LaminasTest\Cache\Storage\Adapter;
 
+use __PHP_Incomplete_Class;
 use Laminas\Cache\Exception\RuntimeException;
 use Laminas\Cache\Storage\Adapter\Filesystem;
 use Laminas\Cache\Storage\Adapter\FilesystemOptions;
 use Laminas\Cache\Storage\Plugin\ExceptionHandler;
 use Laminas\Cache\Storage\Plugin\PluginOptions;
-use LaminasTest\Cache\Storage\Adapter\Filesystem\TestAsset\DelayedFilesystemInteraction;
+use LaminasTest\Cache\Storage\Adapter\Filesystem\TestAsset\SerializableObject;
+use stdClass;
 
+use function assert;
 use function chmod;
 use function count;
 use function error_get_last;
 use function fileatime;
 use function filectime;
+use function filemtime;
+use function filesize;
 use function getenv;
 use function glob;
 use function md5;
 use function mkdir;
-use function pcntl_fork;
-use function posix_getpid;
-use function posix_kill;
-use function sleep;
 use function str_repeat;
 use function substr;
 use function sys_get_temp_dir;
 use function tempnam;
 use function umask;
 use function unlink;
-use function usleep;
-
-use const SIGTERM;
 
 /**
- * @template-extends AbstractCommonAdapterTest<Filesystem,FilesystemOptions>
+ * @template-extends AbstractCommonAdapterTest<FilesystemOptions,Filesystem>
  */
 final class FilesystemTest extends AbstractCommonAdapterTest
 {
+    use ModifiableClockTrait;
+
     protected string $tmpCacheDir;
 
     protected int $umask;
@@ -47,14 +47,14 @@ final class FilesystemTest extends AbstractCommonAdapterTest
     {
         $this->umask = umask();
 
-        if (getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR')) {
+        if (getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR') !== false) {
             $cacheDir = getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR');
         } else {
             $cacheDir = sys_get_temp_dir();
         }
 
         $this->tmpCacheDir = tempnam($cacheDir, 'laminas_cache_test_');
-        if (! $this->tmpCacheDir) {
+        if ($this->tmpCacheDir === false) {
             $this->fail("Can't create temporary cache directory-file.");
         } elseif (! @unlink($this->tmpCacheDir)) {
             $err = error_get_last();
@@ -67,8 +67,7 @@ final class FilesystemTest extends AbstractCommonAdapterTest
         $this->options = new FilesystemOptions([
             'cache_dir' => $this->tmpCacheDir,
         ]);
-        $this->storage = new Filesystem();
-        $this->storage->setOptions($this->options);
+        $this->storage = new Filesystem($this->options, clock: $this->getClock());
 
         parent::setUp();
     }
@@ -94,73 +93,83 @@ final class FilesystemTest extends AbstractCommonAdapterTest
         $storage->setOptions($options);
         $options->setCacheDir($this->tmpCacheDir);
 
-        $this->assertSame($this->tmpCacheDir, $storage->getOptions()->getCacheDir());
-    }
-
-    public function testSetNoAtimeChangesAtimeOfMetadataCapability(): void
-    {
-        $capabilities = $this->storage->getCapabilities();
-
-        $this->options->setNoAtime(false);
-        $this->assertContains('atime', $capabilities->getSupportedMetadata());
-
-        $this->options->setNoAtime(true);
-        $this->assertNotContains('atime', $capabilities->getSupportedMetadata());
-    }
-
-    public function testSetNoCtimeChangesCtimeOfMetadataCapability(): void
-    {
-        $capabilities = $this->storage->getCapabilities();
-
-        $this->options->setNoCtime(false);
-        $this->assertContains('ctime', $capabilities->getSupportedMetadata());
-
-        $this->options->setNoCtime(true);
-        $this->assertNotContains('ctime', $capabilities->getSupportedMetadata());
+        self::assertSame($this->tmpCacheDir, $storage->getOptions()->getCacheDir());
     }
 
     public function testGetMetadataWithCtime(): void
     {
         $this->options->setNoCtime(false);
 
-        $this->assertTrue($this->storage->setItem('test', 'v'));
+        self::assertTrue($this->storage->setItem('test', 'v'));
 
         $meta = $this->storage->getMetadata('test');
-        $this->assertIsArray($meta);
+        self::assertNotNull($meta);
 
-        $expectedCtime = filectime($meta['filespec'] . '.dat');
-        $this->assertEquals($expectedCtime, $meta['ctime']);
+        $expectedCtime = filectime($meta->filespec . '.' . Filesystem::FILENAME_SUFFIX);
+        self::assertEquals($expectedCtime, $meta->creationTime);
     }
 
     public function testGetMetadataWithAtime(): void
     {
         $this->options->setNoAtime(false);
 
-        $this->assertTrue($this->storage->setItem('test', 'v'));
+        self::assertTrue($this->storage->setItem('test', 'v'));
 
         $meta = $this->storage->getMetadata('test');
-        $this->assertIsArray($meta);
+        self::assertNotNull($meta);
 
-        $expectedAtime = fileatime($meta['filespec'] . '.dat');
-        $this->assertEquals($expectedAtime, $meta['atime']);
+        $expectedAtime = fileatime($meta->filespec . '.' . Filesystem::FILENAME_SUFFIX);
+        self::assertEquals($expectedAtime, $meta->lastAccessTime);
+    }
+
+    public function testGetMetadataWithFilesize(): void
+    {
+        $this->options->setNoAtime(false);
+
+        self::assertTrue($this->storage->setItem('test', 'v'));
+
+        $meta = $this->storage->getMetadata('test');
+        self::assertNotNull($meta);
+
+        $expectedAtime = filesize($meta->filespec . '.' . Filesystem::FILENAME_SUFFIX);
+        self::assertEquals($expectedAtime, $meta->filesize);
+    }
+
+    public function testGetMetadataWithMtime(): void
+    {
+        $this->options->setNoAtime(false);
+
+        self::assertTrue($this->storage->setItem('test', 'v'));
+
+        $meta = $this->storage->getMetadata('test');
+        self::assertNotNull($meta);
+
+        $expectedAtime = filemtime($meta->filespec . '.' . Filesystem::FILENAME_SUFFIX);
+        self::assertEquals($expectedAtime, $meta->lastModifiedTime);
     }
 
     public function testClearExpiredExceptionTriggersEvent(): void
     {
-        $this->options->setTtl(0.1);
+        $this->options->setTtl(1);
         $this->storage->setItem('k', 'v');
         $dirs = glob($this->tmpCacheDir . '/*');
         if (count($dirs) === 0) {
             $this->fail('Could not find cache dir');
         }
         chmod($dirs[0], 0500); //make directory rx, unlink should fail
-        sleep(1); //wait for the entry to expire
-        $plugin  = new ExceptionHandler();
-        $options = new PluginOptions(['throw_exceptions' => false]);
+        $this->advanceTime(1);
+
+        $callbackWasCalled = false;
+        $callback          = static function () use (&$callbackWasCalled): void {
+            $callbackWasCalled = true;
+        };
+        $plugin            = new ExceptionHandler();
+        $options           = new PluginOptions(['throw_exceptions' => false, 'exception_callback' => $callback]);
         $plugin->setOptions($options);
         $this->storage->addPlugin($plugin);
         $this->storage->clearExpired();
         chmod($dirs[0], 0700); //set dir back to writable for tearDown
+        self::assertTrue($callbackWasCalled);
     }
 
     public function testClearByNamespaceWithUnexpectedDirectory(): void
@@ -170,7 +179,9 @@ final class FilesystemTest extends AbstractCommonAdapterTest
         $this->storage->setItem('a_key', 'a_value');
         $this->options->setDirLevel(1);
         $this->storage->setItem('b_key', 'b_value');
-        $this->storage->clearByNamespace($this->options->getNamespace());
+        $namespace = $this->options->getNamespace();
+        self::assertNotEmpty($namespace);
+        $this->storage->clearByNamespace($namespace);
     }
 
     public function testClearByPrefixWithUnexpectedDirectory(): void
@@ -183,234 +194,19 @@ final class FilesystemTest extends AbstractCommonAdapterTest
         $glob = glob($this->tmpCacheDir . '/*');
         //contrived prefix which will collide with an existing directory
         $prefix = substr(md5('a_key'), 2, 2);
-        $this->storage->clearByPrefix($prefix);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testRaceConditionInClearByTags(): void
-    {
-        // create cache items
-        $this->options->setDirLevel(0);
-        $this->storage->setItems([
-            'a_key' => 'a_value',
-            'b_key' => 'b_value',
-            'other' => 'other',
-        ]);
-        $this->storage->setTags('a_key', ['a_tag']);
-        $this->storage->setTags('b_key', ['a_tag']);
-
-        $pidChild = pcntl_fork();
-        if ($pidChild === -1) {
-            $this->fail('pcntl_fork() failed');
-        } elseif ($pidChild) {
-            $this->storage = new Filesystem($this->options, new DelayedFilesystemInteraction(5000));
-            // The parent process
-            // Slow down unlink function and start removing items.
-            // Finally test if the item not matching the tag was removed by the child process.
-
-            $this->storage->clearByTags(['a_tag'], true);
-            $this->assertFalse($this->storage->hasItem('other'), 'Child process does not run as expected');
-        } else {
-            // The child process:
-            // Wait to make sure the parent process has started determining files to unlink.
-            // Than remove one of the items the parent process should remove and another item for testing.
-            usleep(1000);
-            $this->storage->removeItems(['b_key', 'other']);
-            posix_kill(posix_getpid(), SIGTERM);
-        }
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testRaceConditionInClearByNamespace(): void
-    {
-        // create cache items
-        $this->options->setDirLevel(0);
-        $this->options->setNamespace('ns-other');
-        $this->storage->setItems([
-            'other' => 'other',
-        ]);
-        $this->options->setNamespace('ns-4-clear');
-        $this->storage->setItems([
-            'a_key' => 'a_value',
-            'b_key' => 'b_value',
-        ]);
-
-        $pidChild = pcntl_fork();
-        if ($pidChild === -1) {
-            $this->fail('pcntl_fork() failed');
-        } elseif ($pidChild) {
-            $this->storage = new Filesystem($this->options, new DelayedFilesystemInteraction(5000));
-
-            // The parent process
-            // Slow down unlink function and start removing items.
-            // Finally test if the item not matching the tag was removed by the child process.
-
-            $this->options->setNamespace('ns-4-clear');
-            $this->storage->clearByNamespace('ns-4-clear');
-
-            $this->assertFalse($this->storage->hasItem('a_key'));
-            $this->assertFalse($this->storage->hasItem('b_key'));
-
-            $this->options->setNamespace('ns-other');
-            $this->assertFalse($this->storage->hasItem('other'), 'Child process does not run as expected');
-        } else {
-            // The child process:
-            // Wait to make sure the parent process has started determining files to unlink.
-            // Than remove one of the items the parent process should remove and another item for testing.
-            usleep(1000);
-
-            $this->options->setNamespace('ns-4-clear');
-            $this->assertTrue($this->storage->removeItem('b_key'));
-
-            $this->options->setNamespace('ns-other');
-            $this->assertTrue($this->storage->removeItem('other'));
-
-            posix_kill(posix_getpid(), SIGTERM);
-        }
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testRaceConditionInClearByPrefix(): void
-    {
-        // create cache items
-        $this->options->setDirLevel(0);
-        $this->options->setNamespace('ns');
-        $this->storage->setItems([
-            'prefix_a_key' => 'a_value',
-            'prefix_b_key' => 'b_value',
-            'other'        => 'other',
-        ]);
-
-        $pidChild = pcntl_fork();
-        if ($pidChild === -1) {
-            $this->fail('pcntl_fork() failed');
-        } elseif ($pidChild) {
-            $this->storage = new Filesystem($this->options, new DelayedFilesystemInteraction(5000));
-
-            // The parent process
-            // Slow down unlink function and start removing items.
-            // Finally test if the item not matching the tag was removed by the child process.
-
-            $this->storage->clearByPrefix('prefix_');
-
-            $this->assertFalse($this->storage->hasItem('prefix_a_key'));
-            $this->assertFalse($this->storage->hasItem('prefix_b_key'));
-
-            $this->assertFalse($this->storage->hasItem('other'), 'Child process does not run as expected');
-        } else {
-            // The child process:
-            // Wait to make sure the parent process has started determining files to unlink.
-            // Than remove one of the items the parent process should remove and another item for testing.
-            usleep(1000);
-
-            $this->assertTrue($this->storage->removeItem('prefix_b_key'));
-            $this->assertTrue($this->storage->removeItem('other'));
-
-            posix_kill(posix_getpid(), SIGTERM);
-        }
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testRaceConditionInClearExpired(): void
-    {
-        // create cache items
-        $this->options->setDirLevel(0);
-        $this->options->setTtl(2);
-        $this->storage->setItems([
-            'a_key' => 'a_value',
-            'b_key' => 'b_value',
-            'other' => 'other',
-        ]);
-
-        // wait TTL seconds and touch item other so this item will not be deleted by clearExpired
-        // and can be used for testing the child process
-        $this->waitForFullSecond();
-        sleep(2);
-        $this->storage->touchItem('other');
-
-        $pidChild = pcntl_fork();
-        if ($pidChild === -1) {
-            $this->fail('pcntl_fork() failed');
-        } elseif ($pidChild) {
-            $this->storage = new Filesystem($this->options, new DelayedFilesystemInteraction(5000));
-
-            // The parent process
-            // Slow down unlink function and start removing items.
-            // Finally test if the item not matching the tag was removed by the child process.
-
-            $this->storage->clearExpired();
-
-            $this->assertFalse($this->storage->hasItem('a_key'));
-            $this->assertFalse($this->storage->hasItem('b_key'));
-
-            $this->assertFalse($this->storage->hasItem('other'), 'Child process does not run as expected');
-        } else {
-            // The child process:
-            // Wait to make sure the parent process has started determining files to unlink.
-            // Than remove one of the items the parent process should remove and another item for testing.
-            usleep(1000);
-
-            $this->assertTrue($this->storage->removeItem('b_key'));
-            $this->assertTrue($this->storage->removeItem('other'));
-
-            posix_kill(posix_getpid(), SIGTERM);
-        }
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testRaceConditionInFlush(): void
-    {
-        // create cache items
-        $this->options->setDirLevel(0);
-        $this->storage->setItems([
-            'a_key' => 'a_value',
-            'b_key' => 'b_value',
-        ]);
-
-        $pidChild = pcntl_fork();
-        if ($pidChild === -1) {
-            $this->fail('pcntl_fork() failed');
-        } elseif ($pidChild) {
-            $this->storage = new Filesystem($this->options, new DelayedFilesystemInteraction(5000));
-
-            // The parent process
-            // Slow down unlink function and start removing items.
-
-            $this->storage->flush();
-
-            $this->assertFalse($this->storage->hasItem('a_key'));
-            $this->assertFalse($this->storage->hasItem('b_key'));
-        } else {
-            // The child process:
-            // Wait to make sure the parent process has started determining files to unlink.
-            // Than remove one of the items the parent process should remove.
-            usleep(1000);
-
-            $this->assertTrue($this->storage->removeItem('b_key'));
-
-            posix_kill(posix_getpid(), SIGTERM);
-        }
+        assert($prefix !== '');
+        self::assertTrue($this->storage->clearByPrefix($prefix));
     }
 
     public function testEmptyTagsArrayClearsTags(): void
     {
         $key  = 'key';
         $tags = ['tag1', 'tag2', 'tag3'];
-        $this->assertTrue($this->storage->setItem($key, 100));
-        $this->assertTrue($this->storage->setTags($key, $tags));
-        $this->assertNotEmpty($this->storage->getTags($key));
-        $this->assertTrue($this->storage->setTags($key, []));
-        $this->assertEmpty($this->storage->getTags($key));
+        self::assertTrue($this->storage->setItem($key, 100));
+        self::assertTrue($this->storage->setTags($key, $tags));
+        self::assertNotEmpty($this->storage->getTags($key));
+        self::assertTrue($this->storage->setTags($key, []));
+        self::assertEmpty($this->storage->getTags($key));
     }
 
     public function testWillThrowRuntimeExceptionIfNamespaceIsTooLong(): void
@@ -425,5 +221,18 @@ final class FilesystemTest extends AbstractCommonAdapterTest
 
         $storage = new Filesystem($options);
         $storage->getCapabilities();
+    }
+
+    public function testRespectsSerializableClassesWhenReadingItems(): void
+    {
+        $this->options->setUnserializableClasses([stdClass::class]);
+
+        $object = new stdClass();
+        self::assertTrue($this->storage->setItem('key', $object));
+        self::assertInstanceOf(stdClass::class, $this->storage->getItem('key'));
+
+        $object = new SerializableObject();
+        self::assertTrue($this->storage->setItem('key', $object));
+        self::assertInstanceOf(__PHP_Incomplete_Class::class, $this->storage->getItem('key'));
     }
 }

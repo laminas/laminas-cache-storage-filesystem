@@ -8,6 +8,7 @@ use Exception;
 use Laminas\Cache\Exception\InvalidArgumentException;
 use Laminas\Cache\Storage\Adapter\AdapterOptions;
 use Laminas\Cache\Storage\Adapter\FilesystemOptions;
+use stdClass;
 
 use function array_values;
 use function assert;
@@ -38,8 +39,7 @@ final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
 {
     private const MACOS_FAMILY = 'Darwin';
 
-    /** @var string */
-    protected $keyPattern = FilesystemOptions::KEY_PATTERN;
+    protected string $keyPattern = FilesystemOptions::KEY_PATTERN;
 
     /**
      * @param array $out
@@ -228,16 +228,31 @@ final class FilesystemOptionsTest extends AbstractAdapterOptionsTest
         $this->options->setUmask(0100);
     }
 
-    public function testSuffixIsMutable(): void
+    public function testSetKeyPatternThrowsInvalidArgumentExceptionWhenCalledWithNonPredefinedPattern(): void
     {
-        $this->options->setSuffix('.cache');
-        self::assertSame('.cache', $this->options->getSuffix());
+        $this->expectException(InvalidArgumentException::class);
+        $this->options->setKeyPattern('abc123');
     }
 
-    public function testTagSuffixIsMutable(): void
+    public function testAcceptsUnserializableClasses(): void
     {
-        $this->options->setTagSuffix('.cache');
-        self::assertSame('.cache', $this->options->getTagSuffix());
+        $this->options->setUnserializableClasses([stdClass::class]);
+        self::assertSame([stdClass::class], $this->options->getUnserializableClasses());
+    }
+
+    public function testSetKeyPatternAllowEmptyString(): void
+    {
+        self::markTestSkipped('Test modifies key pattern which cannot be modified for filesystem adapter.');
+    }
+
+    public function testSetFromArrayWithoutPrioritizedOptions(): void
+    {
+        self::markTestSkipped('Test modifies key pattern which cannot be modified for filesystem adapter.');
+    }
+
+    public function testKeyPattern(): void
+    {
+        self::markTestSkipped('Test modifies key pattern which cannot be modified for filesystem adapter.');
     }
 
     /**

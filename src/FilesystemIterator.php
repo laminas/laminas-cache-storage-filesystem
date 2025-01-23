@@ -7,7 +7,6 @@ namespace Laminas\Cache\Storage\Adapter;
 use GlobIterator;
 use Laminas\Cache\Storage\Adapter\Filesystem;
 use Laminas\Cache\Storage\IteratorInterface;
-use ReturnTypeWillChange;
 
 use function strlen;
 use function substr;
@@ -24,6 +23,8 @@ final class FilesystemIterator implements IteratorInterface
 
     /**
      * The iterator mode
+     *
+     * @var IteratorInterface::CURRENT_AS_*
      */
     private int $mode = IteratorInterface::CURRENT_AS_KEY;
 
@@ -42,13 +43,7 @@ final class FilesystemIterator implements IteratorInterface
      */
     private int $prefixLength;
 
-    /**
-     * Constructor
-     *
-     * @param string      $path
-     * @param string      $prefix
-     */
-    public function __construct(Filesystem $storage, $path, $prefix)
+    public function __construct(Filesystem $storage, string $path, string $prefix)
     {
         $this->storage      = $storage;
         $this->globIterator = new GlobIterator($path, GlobIterator::KEY_AS_FILENAME);
@@ -57,32 +52,25 @@ final class FilesystemIterator implements IteratorInterface
     }
 
     /**
-     * Get storage instance
-     *
-     * @return Filesystem
+     * {@inheritDoc}
      */
-    public function getStorage()
+    public function getStorage(): Filesystem
     {
         return $this->storage;
     }
 
     /**
-     * Get iterator mode
-     *
-     * @return int Value of IteratorInterface::CURRENT_AS_*
+     * {@inheritDoc}
      */
-    public function getMode()
+    public function getMode(): int
     {
         return $this->mode;
     }
 
     /**
-     * Set iterator mode
-     *
-     * @param int $mode
-     * @return FilesystemIterator Provides a fluent interface
+     * {@inheritDoc}
      */
-    public function setMode($mode)
+    public function setMode(int $mode): self
     {
         $this->mode = (int) $mode;
         return $this;
@@ -91,12 +79,9 @@ final class FilesystemIterator implements IteratorInterface
     /* Iterator */
 
     /**
-     * Get current key, value or metadata.
-     *
-     * @return mixed
+     * {@inheritDoc}
      */
-    #[ReturnTypeWillChange]
-    public function current()
+    public function current(): mixed
     {
         if ($this->mode === IteratorInterface::CURRENT_AS_SELF) {
             return $this;
@@ -106,8 +91,6 @@ final class FilesystemIterator implements IteratorInterface
 
         if ($this->mode === IteratorInterface::CURRENT_AS_VALUE) {
             return $this->storage->getItem($key);
-        } elseif ($this->mode === IteratorInterface::CURRENT_AS_METADATA) {
-            return $this->storage->getMetadata($key);
         }
 
         return $key;

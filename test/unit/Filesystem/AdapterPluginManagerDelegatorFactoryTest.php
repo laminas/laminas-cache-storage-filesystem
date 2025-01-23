@@ -15,7 +15,7 @@ final class AdapterPluginManagerDelegatorFactoryTest extends TestCase
 
     private AdapterPluginManagerDelegatorFactory $delegator;
 
-    public function getCommonAdapterNamesProvider(): iterable
+    public static function getCommonAdapterNamesProvider(): iterable
     {
         return [
             'lowercase'    => ['filesystem'],
