@@ -1,51 +1,51 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<files psalm-version="5.18.0@b113f3ed0259fd6e212d87c3df80eec95a6abf19">
+<files psalm-version="5.26.1@d747f6500b38ac4f7dfc5edbcae6e4b637d7add0">
   <file src="benchmark/FilesystemStorageAdapterBench.php">
     <UnusedClass>
-      <code>FilesystemStorageAdapterBench</code>
+      <code><![CDATA[FilesystemStorageAdapterBench]]></code>
     </UnusedClass>
   </file>
   <file src="src/Filesystem.php">
     <ImplicitToStringCast>
-      <code>$pathname</code>
-      <code>$pathname</code>
-      <code>$pathname</code>
+      <code><![CDATA[$pathname]]></code>
+      <code><![CDATA[$pathname]]></code>
+      <code><![CDATA[$pathname]]></code>
     </ImplicitToStringCast>
     <MissingClosureParamType>
-      <code>$dir</code>
-      <code>$event</code>
-      <code>$event</code>
+      <code><![CDATA[$dir]]></code>
+      <code><![CDATA[$event]]></code>
+      <code><![CDATA[$event]]></code>
     </MissingClosureParamType>
     <MixedArgument>
-      <code>$key</code>
+      <code><![CDATA[$key]]></code>
       <code><![CDATA[$params['namespace_separator']]]></code>
     </MixedArgument>
     <MixedArgumentTypeCoercion>
-      <code>$metadata</code>
+      <code><![CDATA[$metadata]]></code>
     </MixedArgumentTypeCoercion>
     <MixedArrayAccess>
       <code><![CDATA[$params['namespace_separator']]]></code>
     </MixedArrayAccess>
     <MixedAssignment>
-      <code>$content</code>
+      <code><![CDATA[$content]]></code>
       <code><![CDATA[$contents[$this->formatFilename($filespec)]]]></code>
-      <code>$key</code>
-      <code>$params</code>
-      <code>$params</code>
-      <code>$value</code>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$params]]></code>
+      <code><![CDATA[$params]]></code>
+      <code><![CDATA[$value]]></code>
     </MixedAssignment>
     <MixedInferredReturnType>
-      <code>FilesystemOptions</code>
-      <code>bool</code>
-      <code>bool</code>
-      <code>bool</code>
+      <code><![CDATA[FilesystemOptions]]></code>
+      <code><![CDATA[bool]]></code>
+      <code><![CDATA[bool]]></code>
+      <code><![CDATA[bool]]></code>
     </MixedInferredReturnType>
     <MixedMethodCall>
-      <code>getParams</code>
-      <code>getParams</code>
+      <code><![CDATA[getParams]]></code>
+      <code><![CDATA[getParams]]></code>
     </MixedMethodCall>
     <MixedOperand>
-      <code>$dir</code>
+      <code><![CDATA[$dir]]></code>
     </MixedOperand>
     <MixedReturnStatement>
       <code><![CDATA[$this->options]]></code>
@@ -69,39 +69,42 @@
             )]]></code>
     </MixedReturnStatement>
     <MoreSpecificImplementedParamType>
-      <code>$options</code>
-      <code>$options</code>
+      <code><![CDATA[$options]]></code>
+      <code><![CDATA[$options]]></code>
     </MoreSpecificImplementedParamType>
     <PossiblyInvalidArgument>
-      <code>$pathname</code>
-      <code>$pathname</code>
-      <code>$pathname</code>
-      <code>$pathname</code>
-      <code>$pathname</code>
-      <code>$pathname</code>
-      <code>$pathname</code>
+      <code><![CDATA[$pathname]]></code>
+      <code><![CDATA[$pathname]]></code>
+      <code><![CDATA[$pathname]]></code>
+      <code><![CDATA[$pathname]]></code>
+      <code><![CDATA[$pathname]]></code>
+      <code><![CDATA[$pathname]]></code>
+      <code><![CDATA[$pathname]]></code>
     </PossiblyInvalidArgument>
     <PossiblyUndefinedVariable>
-      <code>$diff</code>
-      <code>$diff</code>
+      <code><![CDATA[$diff]]></code>
+      <code><![CDATA[$diff]]></code>
     </PossiblyUndefinedVariable>
     <PossiblyUnusedReturnValue>
-      <code>array</code>
-      <code>array</code>
-      <code>bool</code>
-      <code>bool</code>
-      <code>bool</code>
-      <code>bool</code>
-      <code>bool</code>
-      <code>bool</code>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[bool]]></code>
+      <code><![CDATA[bool]]></code>
+      <code><![CDATA[bool]]></code>
+      <code><![CDATA[bool]]></code>
+      <code><![CDATA[bool]]></code>
+      <code><![CDATA[bool]]></code>
     </PossiblyUnusedReturnValue>
     <PropertyNotSetInConstructor>
-      <code>Filesystem</code>
+      <code><![CDATA[Filesystem]]></code>
     </PropertyNotSetInConstructor>
     <RedundantCastGivenDocblockType>
-      <code>(string) $namespace</code>
-      <code>(string) $prefix</code>
+      <code><![CDATA[(string) $namespace]]></code>
+      <code><![CDATA[(string) $prefix]]></code>
     </RedundantCastGivenDocblockType>
+    <RiskyTruthyFalsyComparison>
+      <code><![CDATA[! $glob]]></code>
+    </RiskyTruthyFalsyComparison>
     <UnsupportedPropertyReferenceUsage>
       <code><![CDATA[$totalSpace = &$this->totalSpace]]></code>
     </UnsupportedPropertyReferenceUsage>
@@ -109,47 +112,62 @@
       <code><![CDATA[$contents[$this->formatFilename($filespec)] = &$value]]></code>
     </UnsupportedReferenceUsage>
     <UnusedReturnValue>
-      <code>bool</code>
+      <code><![CDATA[bool]]></code>
     </UnusedReturnValue>
     <UnusedVariable>
-      <code>$clearFolder</code>
+      <code><![CDATA[$clearFolder]]></code>
     </UnusedVariable>
   </file>
   <file src="src/Filesystem/AdapterPluginManagerDelegatorFactory.php">
     <UnusedParam>
-      <code>$container</code>
-      <code>$name</code>
+      <code><![CDATA[$container]]></code>
+      <code><![CDATA[$name]]></code>
     </UnusedParam>
+  </file>
+  <file src="src/Filesystem/LocalFilesystemInteraction.php">
+    <RiskyTruthyFalsyComparison>
+      <code><![CDATA[$umask]]></code>
+      <code><![CDATA[$umask]]></code>
+      <code><![CDATA[$umask]]></code>
+      <code><![CDATA[$umaskToRestore]]></code>
+    </RiskyTruthyFalsyComparison>
   </file>
   <file src="src/FilesystemIterator.php">
     <RedundantCastGivenDocblockType>
-      <code>(int) $mode</code>
+      <code><![CDATA[(int) $mode]]></code>
     </RedundantCastGivenDocblockType>
     <UnusedProperty>
-      <code>$prefix</code>
+      <code><![CDATA[$prefix]]></code>
     </UnusedProperty>
   </file>
   <file src="src/FilesystemOptions.php">
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$options]]></code>
+    </MixedArgumentTypeCoercion>
     <PossiblyInvalidPropertyAssignmentValue>
-      <code>$dirPermission</code>
-      <code>$filePermission</code>
-      <code>$umask</code>
+      <code><![CDATA[$dirPermission]]></code>
+      <code><![CDATA[$filePermission]]></code>
+      <code><![CDATA[$umask]]></code>
     </PossiblyInvalidPropertyAssignmentValue>
     <PossiblyUnusedMethod>
-      <code>setClearStatCache</code>
-      <code>setFileLocking</code>
-      <code>setNamespaceSeparator</code>
+      <code><![CDATA[setClearStatCache]]></code>
+      <code><![CDATA[setFileLocking]]></code>
+      <code><![CDATA[setNamespaceSeparator]]></code>
     </PossiblyUnusedMethod>
     <RedundantCastGivenDocblockType>
-      <code>(int) $dirPermission</code>
-      <code>(int) $filePermission</code>
-      <code>(int) $umask</code>
+      <code><![CDATA[(int) $dirPermission]]></code>
+      <code><![CDATA[(int) $filePermission]]></code>
+      <code><![CDATA[(int) $umask]]></code>
     </RedundantCastGivenDocblockType>
   </file>
   <file src="test/integration/Psr/SimpleCache/FilesystemIntegrationTest.php">
     <PossiblyFalseArgument>
-      <code>$cacheDir</code>
+      <code><![CDATA[$cacheDir]]></code>
     </PossiblyFalseArgument>
+    <RiskyTruthyFalsyComparison>
+      <code><![CDATA[! $this->tmpCacheDir]]></code>
+      <code><![CDATA[getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR')]]></code>
+    </RiskyTruthyFalsyComparison>
   </file>
   <file src="test/unit/FilesystemTest.php">
     <MixedOperand>
@@ -157,14 +175,18 @@
       <code><![CDATA[$meta['filespec']]]></code>
     </MixedOperand>
     <PossiblyFalseArgument>
-      <code>$cacheDir</code>
+      <code><![CDATA[$cacheDir]]></code>
     </PossiblyFalseArgument>
     <PossiblyNullArrayAccess>
       <code><![CDATA[$err['message']]]></code>
       <code><![CDATA[$err['message']]]></code>
     </PossiblyNullArrayAccess>
+    <RiskyTruthyFalsyComparison>
+      <code><![CDATA[! $this->tmpCacheDir]]></code>
+      <code><![CDATA[getenv('TESTS_LAMINAS_CACHE_FILESYSTEM_DIR')]]></code>
+    </RiskyTruthyFalsyComparison>
     <UnusedVariable>
-      <code>$glob</code>
+      <code><![CDATA[$glob]]></code>
     </UnusedVariable>
   </file>
 </files>
